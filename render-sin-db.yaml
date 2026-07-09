@@ -1,8 +1,10 @@
-databases:
-  - name: bombastic-db
-    databaseName: bombastic
-    plan: free
-    region: oregon
+# Versión SIN base de datos — usa si ya tienes 1 Postgres gratis en Render
+# o si usarás Neon/Supabase como base externa.
+#
+# En Render Dashboard → bombastic-api → Environment:
+#   DATABASE_URL = (URL de tu Postgres existente o de Neon)
+#   CORS_ORIGIN  = https://tu-sitio.netlify.app
+#   NODE_ENV     = production
 
 services:
   - type: web
@@ -10,8 +12,6 @@ services:
     runtime: node
     plan: free
     region: oregon
-    # Si subiste SOLO la carpeta 1_ESTO_PARA_ONLINE al repo, usa: backend
-    # Si subiste TODO SisBombastic, usa: 1_ESTO_PARA_ONLINE/backend
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
@@ -20,8 +20,6 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: bombastic-db
-          property: connectionString
+        sync: false
       - key: CORS_ORIGIN
         sync: false

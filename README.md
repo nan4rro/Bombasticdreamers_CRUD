@@ -14,20 +14,50 @@ Frontend en **Netlify** + Backend y base de datos en **Render** (PostgreSQL).
 
 ## Paso 1: Subir backend a Render
 
+> **¿Te sale "cannot have more than one active free tier database"?**  
+> Render solo permite **1 Postgres gratis** por cuenta. Ve a la sección **"Si ya tienes una base gratis"** más abajo.
+
+### Opción A — Blueprint completo (solo si NO tienes otra base gratis)
+
 1. Crea cuenta en [render.com](https://render.com)
-2. Sube esta carpeta a GitHub (o conecta el repo)
+2. Sube esta carpeta a GitHub
 3. En Render: **New → Blueprint** y selecciona `render.yaml`
-   - O manualmente:
-     - Crea **PostgreSQL** (free)
-     - Crea **Web Service** apuntando a carpeta `backend`
-     - Build: `npm install`
-     - Start: `npm start`
 4. Variables de entorno en Render:
    - `DATABASE_URL` → la conexión de tu Postgres (Render la genera)
    - `CORS_ORIGIN` → URL de Netlify (ej: `https://bombastic-dreamers.netlify.app`)
    - `NODE_ENV` → `production`
 5. Al iniciar, el backend crea las tablas automáticamente
 6. Verifica: `https://TU-API.onrender.com/api/health`
+
+### Opción B — Sin crear base nueva (`render-sin-db.yaml`)
+
+Usa `render-sin-db.yaml` si ya tienes una base gratis en Render o usas **Neon**.
+
+1. **New → Blueprint** → archivo `render-sin-db.yaml`
+2. En el web service **bombastic-api**, agrega manualmente:
+   - `DATABASE_URL` = URL de tu Postgres (ver abajo)
+   - `CORS_ORIGIN` = tu URL de Netlify
+
+### Si ya tienes una base gratis en Render
+
+1. Render Dashboard → **PostgreSQL** (la que ya tienes)
+2. Copia **External Database URL**
+3. **New → Web Service** (no uses Blueprint con base de datos):
+   - Root Directory: `backend` (o `1_ESTO_PARA_ONLINE/backend`)
+   - Build: `npm install` | Start: `npm start`
+4. Environment → `DATABASE_URL` = pega la URL copiada
+5. Deploy → prueba `/api/health`
+
+**O** borra la base gratis vieja que no uses y vuelve a desplegar `render.yaml`.
+
+### Alternativa gratis: Neon (recomendado si Render no te deja otra base)
+
+1. [neon.tech](https://neon.tech) → crea proyecto gratis
+2. Copia la connection string PostgreSQL
+3. En Render web service: `DATABASE_URL` = esa URL
+4. El backend crea las tablas solo al arrancar
+
+Guía detallada: `DEPLOY_RENDER.md`
 
 ## Paso 2: Subir frontend a Netlify
 

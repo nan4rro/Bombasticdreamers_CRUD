@@ -44,9 +44,20 @@ async function start() {
     process.exit(1);
   }
 
-  await initDb();
+  // Reintentos: la base de datos puede tardar en estar lista en el primer deploy
+  for (let intento = 1; intento <= 10; intento++) {
+    try {
+      await initDb();
+      console.log('Base de datos conectada e inicializada');
+      break;
+    } catch (err) {
+      console.error(`Intento ${intento}/10 DB:`, err.message);
+      if (intento === 10) throw err;
+      await new Promise((r) => setTimeout(r, 5000));
+    }
+  }
 
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n  Bombastic Dreamers API (online)`);
     console.log(`  Puerto: ${PORT}`);
     console.log(`  Health: /api/health\n`);
