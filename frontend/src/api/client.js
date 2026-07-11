@@ -28,6 +28,7 @@ export const api = {
     get: (id) => request(`/inventario/${id}`),
     create: (data) => request('/inventario', { method: 'POST', body: JSON.stringify(data) }),
     update: (id, data) => request(`/inventario/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id) => request(`/inventario/${id}`, { method: 'DELETE' }),
     abrirCaja: (id, autos) => request(`/inventario/${id}/abrir-caja`, { method: 'POST', body: JSON.stringify({ autos }) }),
   },
 

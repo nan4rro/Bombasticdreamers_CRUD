@@ -1,6 +1,16 @@
 import { getOne, getAll, query, withTransaction } from '../db/database.js';
 import { generarCodigoInterno } from '../utils/calculos.js';
 
+function normalizeCaja(row) {
+  if (!row) return row;
+  return {
+    ...row,
+    cantidad: Number(row.cantidad),
+    costo_unitario: Number(row.costo_unitario),
+    precio_sugerido: row.precio_sugerido != null ? Number(row.precio_sugerido) : null,
+  };
+}
+
 export async function listarInventario(filtros = {}) {
   let sql = 'SELECT * FROM inventario WHERE 1=1';
   const params = [];
@@ -18,9 +28,8 @@ export async function listarInventario(filtros = {}) {
   return getAll(sql, params);
 }
 
-export async function obtenerItem(id, client = null) {
-  const q = client ? (t, p) => client.query(t, p).then((r) => r.rows[0] || null) : getOne;
-  return q('SELECT * FROM inventario WHERE id = $1', [id]);
+export async function obtenerItem(id) {
+  return getOne('SELECT * FROM inventario WHERE id = $1', [id]);
 }
 
 export async function crearItem(data) {
@@ -50,46 +59,88 @@ export async function actualizarItem(id, data) {
     UPDATE inventario SET
       nombre=$1, categoria=$2, tipo_item=$3, serie=$4, anio=$5, case_code=$6,
       cantidad=$7, costo_unitario=$8, precio_sugerido=$9, estado=$10,
-      ubicacion=$11, notas=$12, updated_at=NOW()
-    WHERE id=$13
+      ubicacion=$11, notas=$12, proveedor_nombre=$13, updated_at=NOW()
+    WHERE id=$14
   `, [
     merged.nombre, merged.categoria, merged.tipo_item, merged.serie, merged.anio, merged.case_code,
     merged.cantidad, merged.costo_unitario, merged.precio_sugerido, merged.estado,
-    merged.ubicacion, merged.notas, id,
+    merged.ubicacion, merged.notas, merged.proveedor_nombre || null, id,
   ]);
 
   return obtenerItem(id);
 }
 
+export async function eliminarItem(id) {
+  const item = await obtenerItem(id);
+  if (!item) return false;
+  await query('DELETE FROM inventario WHERE id = $1', [id]);
+  return true;
+}
+
+/**
+ * Abre UNA caja del stock (resta 1).
+ * Costo de cada auto = costo_unitario de la caja / cantidad de autos ingresados.
+ * Ej: caja 950 Bs, 10 autos → cada uno 95.
+ */
 export async function abrirCaja(cajaId, autos) {
+  const autosValidos = (autos || []).filter((a) => a?.nombre?.trim());
+  if (autosValidos.length === 0) {
+    throw new Error('Debes ingresar al menos un auto');
+  }
+
   return withTransaction(async (client) => {
-    const cajaRes = await client.query('SELECT * FROM inventario WHERE id = $1', [cajaId]);
-    const caja = cajaRes.rows[0];
+    const cajaRes = await client.query('SELECT * FROM inventario WHERE id = $1 FOR UPDATE', [cajaId]);
+    const caja = normalizeCaja(cajaRes.rows[0]);
     if (!caja) throw new Error('Caja no encontrada');
     if (caja.tipo_item !== 'caja_cerrada') throw new Error('El item no es una caja cerrada');
     if (caja.estado !== 'disponible') throw new Error('La caja no está disponible');
+    if (caja.cantidad < 1) throw new Error('No hay cajas disponibles para abrir');
 
-    await client.query(`UPDATE inventario SET estado='vendido', cantidad=0, updated_at=NOW() WHERE id=$1`, [cajaId]);
+    const nuevaCantidad = caja.cantidad - 1;
+    const nuevoEstado = nuevaCantidad <= 0 ? 'vendido' : 'disponible';
 
+    await client.query(
+      `UPDATE inventario SET cantidad=$1, estado=$2, updated_at=NOW() WHERE id=$3`,
+      [nuevaCantidad, nuevoEstado, cajaId]
+    );
+
+    const costoPorAuto = Number(caja.costo_unitario) / autosValidos.length;
     const itemsCreados = [];
-    for (const auto of autos) {
+
+    for (const auto of autosValidos) {
       const res = await client.query(`
         INSERT INTO inventario (
           codigo_interno, nombre, categoria, tipo_item, serie, anio, case_code,
           cantidad, costo_unitario, precio_sugerido, estado, ubicacion,
           fecha_ingreso, proveedor_id, proveedor_nombre, parent_id, notas
-        ) VALUES ($1,$2,$3,'auto_individual',$4,$5,$6,1,$7,$8,'disponible',$9,$10,$11,$12,$13,$14) RETURNING id
+        ) VALUES ($1,$2,$3,'auto_individual',$4,$5,$6,1,$7,$8,'disponible',$9,$10,$11,$12,$13,$14)
+        RETURNING *
       `, [
-        auto.codigo_interno || generarCodigoInterno(), auto.nombre, caja.categoria,
-        auto.serie || caja.serie, auto.anio || caja.anio, auto.case_code || caja.case_code,
-        auto.costo_unitario ?? caja.costo_unitario, auto.precio_sugerido || caja.precio_sugerido,
-        auto.ubicacion || caja.ubicacion, caja.fecha_ingreso,
-        caja.proveedor_id, caja.proveedor_nombre, cajaId, auto.notas || null,
+        auto.codigo_interno || generarCodigoInterno(),
+        auto.nombre.trim(),
+        caja.categoria,
+        auto.serie || caja.serie,
+        auto.anio || caja.anio,
+        auto.case_code || caja.case_code,
+        auto.costo_unitario != null && auto.costo_unitario !== ''
+          ? Number(auto.costo_unitario)
+          : costoPorAuto,
+        auto.precio_sugerido || caja.precio_sugerido,
+        auto.ubicacion || caja.ubicacion,
+        caja.fecha_ingreso,
+        caja.proveedor_id,
+        caja.proveedor_nombre,
+        cajaId,
+        auto.notas || null,
       ]);
-      const item = await obtenerItem(res.rows[0].id);
-      itemsCreados.push(item);
+      itemsCreados.push(res.rows[0]);
     }
-    return itemsCreados;
+
+    return {
+      cajas_restantes: nuevaCantidad,
+      costo_por_auto: costoPorAuto,
+      items: itemsCreados,
+    };
   });
 }
 

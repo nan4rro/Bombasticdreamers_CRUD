@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { api, formatMoney, formatDate, hoy } from '../api/client';
+import { useEffect, useMemo, useState } from 'react';
+import { api, formatMoney, hoy } from '../api/client';
 import { CATEGORIAS, ESTADOS_INVENTARIO, TIPOS_ITEM, labelOf, badgeClass } from '../utils/constants';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
@@ -22,11 +22,31 @@ const emptyForm = {
   notas: '',
 };
 
+function itemToForm(item) {
+  return {
+    nombre: item.nombre || '',
+    categoria: item.categoria || 'mainline',
+    tipo_item: item.tipo_item || 'auto_individual',
+    serie: item.serie || '',
+    anio: item.anio || '',
+    case_code: item.case_code || '',
+    cantidad: item.cantidad ?? 1,
+    costo_unitario: item.costo_unitario ?? '',
+    precio_sugerido: item.precio_sugerido ?? '',
+    estado: item.estado || 'disponible',
+    ubicacion: item.ubicacion || '',
+    fecha_ingreso: item.fecha_ingreso || hoy(),
+    proveedor_nombre: item.proveedor_nombre || '',
+    notas: item.notas || '',
+  };
+}
+
 export default function Inventario() {
   const [items, setItems] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
   const [modal, setModal] = useState(false);
+  const [editId, setEditId] = useState(null);
   const [cajaModal, setCajaModal] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [autosAbrir, setAutosAbrir] = useState([{ nombre: '' }]);
@@ -41,19 +61,33 @@ export default function Inventario() {
 
   useEffect(() => { load(); }, [busqueda, filtroEstado]);
 
-  const openNew = () => { setForm(emptyForm); setError(''); setModal(true); };
+  const openNew = () => {
+    setForm(emptyForm);
+    setEditId(null);
+    setError('');
+    setModal(true);
+  };
+
+  const openEdit = (item) => {
+    setForm(itemToForm(item));
+    setEditId(item.id);
+    setError('');
+    setModal(true);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
-      await api.inventario.create({
+      const payload = {
         ...form,
         cantidad: Number(form.cantidad),
         costo_unitario: Number(form.costo_unitario),
-        precio_sugerido: form.precio_sugerido ? Number(form.precio_sugerido) : null,
-        anio: form.anio ? Number(form.anio) : null,
-      });
+        precio_sugerido: form.precio_sugerido !== '' ? Number(form.precio_sugerido) : null,
+        anio: form.anio !== '' ? Number(form.anio) : null,
+      };
+      if (editId) await api.inventario.update(editId, payload);
+      else await api.inventario.create(payload);
       setModal(false);
       load();
     } catch (err) {
@@ -61,11 +95,37 @@ export default function Inventario() {
     }
   };
 
+  const handleDelete = async (item) => {
+    if (!confirm(`¿Eliminar "${item.nombre}" del inventario?`)) return;
+    try {
+      await api.inventario.delete(item.id);
+      load();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const autosValidos = useMemo(
+    () => autosAbrir.filter((a) => a.nombre.trim()),
+    [autosAbrir]
+  );
+
+  const costoPorAuto = useMemo(() => {
+    if (!cajaModal || autosValidos.length === 0) return 0;
+    return Number(cajaModal.costo_unitario || 0) / autosValidos.length;
+  }, [cajaModal, autosValidos.length]);
+
   const handleAbrirCaja = async () => {
     try {
-      const autos = autosAbrir.filter((a) => a.nombre.trim());
-      if (autos.length === 0) return alert('Agrega al menos un auto');
-      await api.inventario.abrirCaja(cajaModal.id, autos);
+      if (autosValidos.length === 0) return alert('Agrega al menos un auto');
+      const result = await api.inventario.abrirCaja(cajaModal.id, autosValidos);
+      const restantes = result?.cajas_restantes ?? 0;
+      alert(
+        `Se abrió 1 caja.\n` +
+        `Autos creados: ${autosValidos.length}\n` +
+        `Costo por auto: ${formatMoney(result?.costo_por_auto ?? costoPorAuto)}\n` +
+        `Cajas restantes: ${restantes}`
+      );
       setCajaModal(null);
       load();
     } catch (err) {
@@ -83,7 +143,7 @@ export default function Inventario() {
         action={<button className="btn-primary" onClick={openNew}>+ Agregar item</button>}
       />
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex gap-3 mb-4 flex-wrap">
         <input
           className="max-w-xs"
           placeholder="Buscar por nombre, código o serie..."
@@ -124,12 +184,17 @@ export default function Inventario() {
                 <td>{item.precio_sugerido ? formatMoney(item.precio_sugerido) : '-'}</td>
                 <td><Badge label={labelOf(ESTADOS_INVENTARIO, item.estado)} colorClass={badgeClass(ESTADOS_INVENTARIO, item.estado)} /></td>
                 <td>{item.ubicacion || '-'}</td>
-                <td>
-                  {item.tipo_item === 'caja_cerrada' && item.estado === 'disponible' && (
-                    <button className="btn-primary text-xs py-1" onClick={() => { setCajaModal(item); setAutosAbrir([{ nombre: '' }]); }}>
-                      Abrir caja
+                <td className="whitespace-nowrap space-x-1">
+                  <button className="btn-secondary text-xs py-1" onClick={() => openEdit(item)}>Editar</button>
+                  {item.tipo_item === 'caja_cerrada' && item.estado === 'disponible' && Number(item.cantidad) > 0 && (
+                    <button
+                      className="btn-primary text-xs py-1"
+                      onClick={() => { setCajaModal(item); setAutosAbrir([{ nombre: '' }]); }}
+                    >
+                      Abrir 1 caja
                     </button>
                   )}
+                  <button className="btn-danger text-xs py-1" onClick={() => handleDelete(item)}>Eliminar</button>
                 </td>
               </tr>
             ))}
@@ -140,7 +205,7 @@ export default function Inventario() {
         </table>
       </div>
 
-      <Modal open={modal} onClose={() => setModal(false)} title="Agregar al inventario" wide>
+      <Modal open={modal} onClose={() => setModal(false)} title={editId ? 'Editar item' : 'Agregar al inventario'} wide>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-red-600 text-sm">{error}</p>}
           <div className="grid grid-cols-2 gap-4">
@@ -173,8 +238,8 @@ export default function Inventario() {
               <input value={form.case_code} onChange={set('case_code')} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Cantidad</label>
-              <input type="number" min="1" value={form.cantidad} onChange={set('cantidad')} required />
+              <label className="block text-xs font-medium text-gray-600 mb-1">Cantidad / Stock</label>
+              <input type="number" min="0" step="1" value={form.cantidad} onChange={set('cantidad')} required />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Costo unitario</label>
@@ -185,23 +250,52 @@ export default function Inventario() {
               <input type="number" min="0" step="0.01" value={form.precio_sugerido} onChange={set('precio_sugerido')} />
             </div>
             <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+              <select value={form.estado} onChange={set('estado')}>
+                {ESTADOS_INVENTARIO.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Ubicación</label>
               <input value={form.ubicacion} onChange={set('ubicacion')} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Proveedor</label>
+              <input value={form.proveedor_nombre} onChange={set('proveedor_nombre')} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Fecha ingreso</label>
               <input type="date" value={form.fecha_ingreso} onChange={set('fecha_ingreso')} required />
             </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Notas</label>
+              <input value={form.notas} onChange={set('notas')} />
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
-            <button type="submit" className="btn-primary">Guardar</button>
+            <button type="submit" className="btn-primary">{editId ? 'Guardar cambios' : 'Guardar'}</button>
           </div>
         </form>
       </Modal>
 
-      <Modal open={!!cajaModal} onClose={() => setCajaModal(null)} title={`Abrir caja: ${cajaModal?.nombre}`} wide>
-        <p className="text-sm text-gray-500 mb-4">Ingresa los nombres de los autos individuales que salen de esta caja.</p>
+      <Modal open={!!cajaModal} onClose={() => setCajaModal(null)} title={`Abrir 1 caja: ${cajaModal?.nombre}`} wide>
+        <div className="bg-gray-50 rounded-lg p-3 text-sm mb-4 space-y-1">
+          <p><strong>Cajas disponibles:</strong> {cajaModal?.cantidad}</p>
+          <p><strong>Costo por caja:</strong> {formatMoney(cajaModal?.costo_unitario)}</p>
+          <p><strong>Autos a registrar:</strong> {autosValidos.length}</p>
+          <p>
+            <strong>Costo por auto:</strong>{' '}
+            {autosValidos.length > 0
+              ? formatMoney(costoPorAuto)
+              : '— (agrega autos)'}
+          </p>
+          <p className="text-xs text-gray-500">
+            Solo se abre 1 caja. Si quedan más, podrás abrir otra después.
+          </p>
+        </div>
+
+        <p className="text-sm text-gray-500 mb-3">Nombres de los autos de esta caja:</p>
         {autosAbrir.map((auto, i) => (
           <div key={i} className="flex gap-2 mb-2">
             <input
@@ -213,6 +307,15 @@ export default function Inventario() {
                 setAutosAbrir(copy);
               }}
             />
+            {autosAbrir.length > 1 && (
+              <button
+                type="button"
+                className="btn-danger text-xs"
+                onClick={() => setAutosAbrir(autosAbrir.filter((_, idx) => idx !== i))}
+              >
+                Quitar
+              </button>
+            )}
           </div>
         ))}
         <button
@@ -224,7 +327,7 @@ export default function Inventario() {
         </button>
         <div className="flex justify-end gap-2">
           <button className="btn-secondary" onClick={() => setCajaModal(null)}>Cancelar</button>
-          <button className="btn-primary" onClick={handleAbrirCaja}>Abrir caja</button>
+          <button className="btn-primary" onClick={handleAbrirCaja}>Abrir esta caja</button>
         </div>
       </Modal>
     </div>

@@ -33,9 +33,15 @@ router.put('/:id', asyncHandler(async (req, res) => {
   res.json(item);
 }));
 
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const ok = await inventarioService.eliminarItem(Number(req.params.id));
+  if (!ok) return res.status(404).json({ error: 'Item no encontrado' });
+  res.json({ ok: true });
+}));
+
 router.post('/:id/abrir-caja', asyncHandler(async (req, res) => {
-  const items = await inventarioService.abrirCaja(Number(req.params.id), req.body.autos || []);
-  res.json(items);
+  const result = await inventarioService.abrirCaja(Number(req.params.id), req.body.autos || []);
+  res.json(result);
 }));
 
 export default router;
