@@ -27,6 +27,8 @@ export async function crearCompra(data) {
   const costoTotal = calcularCostoTotal(data.costo_producto, data.transporte, data.impuestos, data.otros_gastos);
   const costoUnitario = calcularCostoUnitario(costoTotal, data.cantidad);
 
+  const estado = data.estado || 'en_camino';
+
   const res = await query(`
     INSERT INTO compras (
       fecha, proveedor_id, proveedor_nombre, tipo_compra, descripcion, cantidad,
@@ -36,10 +38,16 @@ export async function crearCompra(data) {
     data.fecha, data.proveedor_id || null, data.proveedor_nombre || null,
     data.tipo_compra, data.descripcion, data.cantidad,
     data.costo_producto || 0, data.transporte || 0, data.impuestos || 0, data.otros_gastos || 0,
-    costoTotal, costoUnitario, data.es_caja !== false, data.estado || 'en_camino',
+    costoTotal, costoUnitario, data.es_caja !== false, estado,
   ]);
 
-  return obtenerCompra(res.rows[0].id);
+  const compraId = res.rows[0].id;
+
+  if (estado === 'recibido') {
+    await ingresarCompraAInventario(compraId);
+  }
+
+  return obtenerCompra(compraId);
 }
 
 export async function actualizarCompra(id, data) {

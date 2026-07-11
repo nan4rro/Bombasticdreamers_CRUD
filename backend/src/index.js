@@ -10,6 +10,7 @@ import gastosRoutes from './routes/gastos.routes.js';
 import cajaRoutes from './routes/caja.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import backupRoutes from './routes/backup.routes.js';
+import resetRoutes from './routes/reset.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -33,6 +34,7 @@ app.use('/api/gastos', gastosRoutes);
 app.use('/api/caja', cajaRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/admin', resetRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', nombre: 'Bombastic Dreamers Online' });
