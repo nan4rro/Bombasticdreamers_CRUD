@@ -124,6 +124,118 @@ export async function cancelarVenta(id) {
   return obtenerVenta(id);
 }
 
+/**
+ * Recalcula costos y utilidades de ventas usando el costo actual del inventario.
+ * Corrige ventas hechas cuando el costo de la caja aún estaba mal.
+ */
+export async function recalcularUtilidades() {
+  return withTransaction(async (client) => {
+    const ventasRes = await client.query(`SELECT id, delivery FROM ventas WHERE estado != 'cancelado'`);
+    let ventasActualizadas = 0;
+    let itemsActualizados = 0;
+
+    for (const venta of ventasRes.rows) {
+      const itemsRes = await client.query('SELECT * FROM venta_items WHERE venta_id = $1', [venta.id]);
+      let cambió = false;
+
+      for (const item of itemsRes.rows) {
+        let nuevoCosto = Number(item.costo_unitario);
+
+        if (item.inventario_id) {
+          const inv = await client.query('SELECT costo_unitario FROM inventario WHERE id = $1', [item.inventario_id]);
+          if (inv.rows[0]) {
+            nuevoCosto = Number(inv.rows[0].costo_unitario);
+          }
+        } else if (item.producto_nombre) {
+          const inv = await client.query(
+            `SELECT costo_unitario FROM inventario
+             WHERE nombre = $1
+             ORDER BY updated_at DESC NULLS LAST, id DESC
+             LIMIT 1`,
+            [item.producto_nombre]
+          );
+          if (inv.rows[0]) {
+            nuevoCosto = Number(inv.rows[0].costo_unitario);
+          }
+        }
+
+        const utilidad = (Number(item.precio_venta) - nuevoCosto) * Number(item.cantidad);
+        totalCosto += nuevoCosto * Number(item.cantidad);
+
+        if (nuevoCosto !== Number(item.costo_unitario) || utilidad !== Number(item.utilidad)) {
+          await client.query(
+            `UPDATE venta_items SET costo_unitario = $1, utilidad = $2 WHERE id = $3`,
+            [nuevoCosto, utilidad, item.id]
+          );
+          itemsActualizados += 1;
+          cambió = true;
+        }
+      }
+
+      const itemsFresh = await client.query('SELECT * FROM venta_items WHERE venta_id = $1', [venta.id]);
+      let totalCostoFinal = 0;
+      let utilidadItems = 0;
+      for (const it of itemsFresh.rows) {
+        totalCostoFinal += Number(it.costo_unitario) * Number(it.cantidad);
+        utilidadItems += Number(it.utilidad);
+      }
+
+      await client.query(
+        `UPDATE ventas SET total_costo = $1, utilidad_bruta = $2 WHERE id = $3`,
+        [totalCostoFinal, utilidadItems, venta.id]
+      );
+
+      if (cambió) ventasActualizadas += 1;
+    }
+
+    return {
+      ok: true,
+      ventas_actualizadas: ventasActualizadas,
+      items_actualizados: itemsActualizados,
+      mensaje: `Se recalcularon ${itemsActualizados} ítems en ${ventasActualizadas} ventas.`,
+    };
+  });
+}
+
+/**
+ * Actualiza costo/precio de un ítem de venta y recalcula la utilidad de esa venta.
+ */
+export async function actualizarItemVenta(itemId, data) {
+  const item = await getOne('SELECT * FROM venta_items WHERE id = $1', [itemId]);
+  if (!item) return null;
+
+  const precio = data.precio_venta != null ? Number(data.precio_venta) : Number(item.precio_venta);
+  const costo = data.costo_unitario != null ? Number(data.costo_unitario) : Number(item.costo_unitario);
+  const cantidad = data.cantidad != null ? Number(data.cantidad) : Number(item.cantidad);
+  const utilidad = (precio - costo) * cantidad;
+
+  await query(
+    `UPDATE venta_items SET precio_venta=$1, costo_unitario=$2, cantidad=$3, utilidad=$4 WHERE id=$5`,
+    [precio, costo, cantidad, utilidad, itemId]
+  );
+
+  const ventaId = item.venta_id;
+  const items = await getAll('SELECT * FROM venta_items WHERE venta_id = $1', [ventaId]);
+  const venta = await getOne('SELECT * FROM ventas WHERE id = $1', [ventaId]);
+
+  let totalCosto = 0;
+  let utilidadBruta = 0;
+  let totalProductos = 0;
+  for (const it of items) {
+    totalCosto += Number(it.costo_unitario) * Number(it.cantidad);
+    utilidadBruta += Number(it.utilidad);
+    totalProductos += Number(it.precio_venta) * Number(it.cantidad);
+  }
+
+  const delivery = Number(venta.delivery || 0);
+  await query(
+    `UPDATE ventas SET total_venta=$1, total_costo=$2, utilidad_bruta=$3 WHERE id=$4`,
+    [totalProductos + delivery, totalCosto, utilidadBruta, ventaId]
+  );
+
+  return obtenerVenta(ventaId);
+}
+
 export async function topProductos(limite = 10, desde, hasta) {
   let sql = `
     SELECT producto_nombre, SUM(cantidad) as total_vendido,

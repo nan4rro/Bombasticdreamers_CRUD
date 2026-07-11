@@ -25,6 +25,17 @@ router.post('/', asyncHandler(async (req, res) => {
   res.status(201).json(venta);
 }));
 
+router.post('/recalcular-utilidades', asyncHandler(async (req, res) => {
+  const result = await ventasService.recalcularUtilidades();
+  res.json(result);
+}));
+
+router.put('/items/:itemId', asyncHandler(async (req, res) => {
+  const venta = await ventasService.actualizarItemVenta(Number(req.params.itemId), req.body);
+  if (!venta) return res.status(404).json({ error: 'Ítem de venta no encontrado' });
+  res.json(venta);
+}));
+
 router.post('/:id/cancelar', asyncHandler(async (req, res) => {
   const venta = await ventasService.cancelarVenta(Number(req.params.id));
   if (!venta) return res.status(404).json({ error: 'Venta no encontrada' });

@@ -11,6 +11,8 @@ export default function Ventas() {
   const [ventas, setVentas] = useState([]);
   const [inventario, setInventario] = useState([]);
   const [modal, setModal] = useState(false);
+  const [detalle, setDetalle] = useState(null);
+  const [recalcLoading, setRecalcLoading] = useState(false);
   const [form, setForm] = useState({
     fecha: hoy(),
     cliente_nombre: '',
@@ -94,12 +96,43 @@ export default function Ventas() {
     }
   };
 
+  const handleRecalcular = async () => {
+    if (!confirm('¿Recalcular utilidades de todas las ventas con el costo actual del inventario?')) return;
+    setRecalcLoading(true);
+    try {
+      const result = await api.ventas.recalcularUtilidades();
+      alert(result.mensaje || 'Utilidades recalculadas');
+      load();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setRecalcLoading(false);
+    }
+  };
+
+  const handleUpdateItem = async (itemId, field, value) => {
+    try {
+      const updated = await api.ventas.updateItem(itemId, { [field]: Number(value) });
+      setDetalle(updated);
+      load();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div>
       <PageHeader
         title="Ventas"
         subtitle="Registra ventas y descuenta inventario automáticamente"
-        action={<button className="btn-primary" onClick={openNew}>+ Nueva venta</button>}
+        action={
+          <div className="flex gap-2">
+            <button className="btn-secondary" onClick={handleRecalcular} disabled={recalcLoading}>
+              {recalcLoading ? 'Recalculando...' : 'Recalcular utilidades'}
+            </button>
+            <button className="btn-primary" onClick={openNew}>+ Nueva venta</button>
+          </div>
+        }
       />
 
       <div className="card overflow-x-auto">
@@ -110,10 +143,12 @@ export default function Ventas() {
               <th>Cliente</th>
               <th>Productos</th>
               <th>Total</th>
+              <th>Costo</th>
               <th>Utilidad</th>
               <th>Pago</th>
               <th>Canal</th>
               <th>Estado</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -123,14 +158,18 @@ export default function Ventas() {
                 <td>{v.cliente_nombre || '-'}</td>
                 <td>{v.items?.map((i) => i.producto_nombre).join(', ')}</td>
                 <td>{formatMoney(v.total_venta)}</td>
+                <td>{formatMoney(v.total_costo)}</td>
                 <td className="text-green-600">{formatMoney(v.utilidad_bruta)}</td>
                 <td>{labelOf(METODOS_PAGO, v.metodo_pago)}</td>
                 <td>{labelOf(CANALES, v.canal)}</td>
                 <td><Badge label={labelOf(ESTADOS_VENTA, v.estado)} colorClass={badgeClass(ESTADOS_VENTA, v.estado)} /></td>
+                <td>
+                  <button className="btn-secondary text-xs py-1" onClick={() => setDetalle(v)}>Ver / Editar</button>
+                </td>
               </tr>
             ))}
             {ventas.length === 0 && (
-              <tr><td colSpan={8} className="text-center text-gray-400 py-8">No hay ventas registradas</td></tr>
+              <tr><td colSpan={10} className="text-center text-gray-400 py-8">No hay ventas registradas</td></tr>
             )}
           </tbody>
         </table>
@@ -230,6 +269,74 @@ export default function Ventas() {
             <button type="submit" className="btn-primary">Registrar venta</button>
           </div>
         </form>
+      </Modal>
+
+      <Modal open={!!detalle} onClose={() => setDetalle(null)} title={`Venta #${detalle?.id || ''}`} wide>
+        {detalle && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <p><strong>Fecha:</strong> {formatDate(detalle.fecha)}</p>
+              <p><strong>Cliente:</strong> {detalle.cliente_nombre || '-'}</p>
+              <p><strong>Total:</strong> {formatMoney(detalle.total_venta)}</p>
+              <p><strong>Utilidad:</strong> <span className="text-green-600">{formatMoney(detalle.utilidad_bruta)}</span></p>
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Puedes corregir el costo unitario de cada producto. La utilidad se recalcula sola.
+            </p>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Cant.</th>
+                  <th>Precio</th>
+                  <th>Costo</th>
+                  <th>Utilidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {detalle.items?.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.producto_nombre}</td>
+                    <td>{item.cantidad}</td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-24"
+                        defaultValue={item.precio_venta}
+                        onBlur={(e) => {
+                          if (Number(e.target.value) !== Number(item.precio_venta)) {
+                            handleUpdateItem(item.id, 'precio_venta', e.target.value);
+                          }
+                        }}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-24"
+                        defaultValue={item.costo_unitario}
+                        onBlur={(e) => {
+                          if (Number(e.target.value) !== Number(item.costo_unitario)) {
+                            handleUpdateItem(item.id, 'costo_unitario', e.target.value);
+                          }
+                        }}
+                      />
+                    </td>
+                    <td className="text-green-600">{formatMoney(item.utilidad)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="flex justify-end">
+              <button className="btn-secondary" onClick={() => setDetalle(null)}>Cerrar</button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
