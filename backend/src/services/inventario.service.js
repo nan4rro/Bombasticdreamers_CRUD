@@ -79,13 +79,29 @@ export async function eliminarItem(id) {
 
 /**
  * Abre UNA caja del stock (resta 1).
- * Costo de cada auto = costo_unitario de la caja / cantidad de autos ingresados.
- * Ej: caja 950 Bs, 10 autos → cada uno 95.
+ *
+ * Modos:
+ * A) autos = [{nombre}, ...] → un registro por nombre
+ * B) nombreLote + cantidad → crea N autos individuales (cantidad=1 cada uno)
+ *    Ej: nombre "99ABCDE Autos", cantidad 72 → 72 filas individuales
+ *
+ * Costo de cada auto = costo_unitario de la caja / cantidad de autos.
  */
-export async function abrirCaja(cajaId, autos) {
-  const autosValidos = (autos || []).filter((a) => a?.nombre?.trim());
+export async function abrirCaja(cajaId, autos, opciones = {}) {
+  let autosValidos = (autos || []).filter((a) => a?.nombre?.trim());
+
+  const nombreLote = String(opciones.nombre || opciones.nombre_lote || '').trim();
+  const cantidadLote = Number(opciones.cantidad || 0);
+
+  if (nombreLote && cantidadLote > 0) {
+    if (cantidadLote > 500) {
+      throw new Error('Máximo 500 autos por apertura de caja');
+    }
+    autosValidos = Array.from({ length: cantidadLote }, () => ({ nombre: nombreLote }));
+  }
+
   if (autosValidos.length === 0) {
-    throw new Error('Debes ingresar al menos un auto');
+    throw new Error('Debes ingresar al menos un auto, o un nombre con cantidad');
   }
 
   return withTransaction(async (client) => {
@@ -139,6 +155,7 @@ export async function abrirCaja(cajaId, autos) {
     return {
       cajas_restantes: nuevaCantidad,
       costo_por_auto: costoPorAuto,
+      cantidad_creada: itemsCreados.length,
       items: itemsCreados,
     };
   });

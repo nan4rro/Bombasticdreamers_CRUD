@@ -49,6 +49,9 @@ export default function Inventario() {
   const [editId, setEditId] = useState(null);
   const [cajaModal, setCajaModal] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [modoAbrir, setModoAbrir] = useState('lote'); // lote | lista
+  const [loteNombre, setLoteNombre] = useState('');
+  const [loteCantidad, setLoteCantidad] = useState(72);
   const [autosAbrir, setAutosAbrir] = useState([{ nombre: '' }]);
   const [error, setError] = useState('');
 
@@ -73,6 +76,14 @@ export default function Inventario() {
     setEditId(item.id);
     setError('');
     setModal(true);
+  };
+
+  const openCaja = (item) => {
+    setCajaModal(item);
+    setModoAbrir('lote');
+    setLoteNombre(item.nombre || '');
+    setLoteCantidad(72);
+    setAutosAbrir([{ nombre: '' }]);
   };
 
   const handleSubmit = async (e) => {
@@ -110,19 +121,32 @@ export default function Inventario() {
     [autosAbrir]
   );
 
+  const cantidadPreview = modoAbrir === 'lote' ? Number(loteCantidad) || 0 : autosValidos.length;
+
   const costoPorAuto = useMemo(() => {
-    if (!cajaModal || autosValidos.length === 0) return 0;
-    return Number(cajaModal.costo_unitario || 0) / autosValidos.length;
-  }, [cajaModal, autosValidos.length]);
+    if (!cajaModal || cantidadPreview <= 0) return 0;
+    return Number(cajaModal.costo_unitario || 0) / cantidadPreview;
+  }, [cajaModal, cantidadPreview]);
 
   const handleAbrirCaja = async () => {
     try {
-      if (autosValidos.length === 0) return alert('Agrega al menos un auto');
-      const result = await api.inventario.abrirCaja(cajaModal.id, autosValidos);
+      let result;
+      if (modoAbrir === 'lote') {
+        if (!loteNombre.trim()) return alert('Escribe el nombre del auto');
+        if (!loteCantidad || Number(loteCantidad) < 1) return alert('Indica la cantidad');
+        result = await api.inventario.abrirCaja(cajaModal.id, {
+          nombre: loteNombre.trim(),
+          cantidad: Number(loteCantidad),
+        });
+      } else {
+        if (autosValidos.length === 0) return alert('Agrega al menos un auto');
+        result = await api.inventario.abrirCaja(cajaModal.id, { autos: autosValidos });
+      }
+
       const restantes = result?.cajas_restantes ?? 0;
       alert(
         `Se abrió 1 caja.\n` +
-        `Autos creados: ${autosValidos.length}\n` +
+        `Autos individuales creados: ${result?.cantidad_creada ?? cantidadPreview}\n` +
         `Costo por auto: ${formatMoney(result?.costo_por_auto ?? costoPorAuto)}\n` +
         `Cajas restantes: ${restantes}`
       );
@@ -189,7 +213,7 @@ export default function Inventario() {
                   {item.tipo_item === 'caja_cerrada' && item.estado === 'disponible' && Number(item.cantidad) > 0 && (
                     <button
                       className="btn-primary text-xs py-1"
-                      onClick={() => { setCajaModal(item); setAutosAbrir([{ nombre: '' }]); }}
+                      onClick={() => openCaja(item)}
                     >
                       Abrir 1 caja
                     </button>
@@ -283,48 +307,92 @@ export default function Inventario() {
         <div className="bg-gray-50 rounded-lg p-3 text-sm mb-4 space-y-1">
           <p><strong>Cajas disponibles:</strong> {cajaModal?.cantidad}</p>
           <p><strong>Costo por caja:</strong> {formatMoney(cajaModal?.costo_unitario)}</p>
-          <p><strong>Autos a registrar:</strong> {autosValidos.length}</p>
+          <p><strong>Autos a crear:</strong> {cantidadPreview || '—'}</p>
           <p>
             <strong>Costo por auto:</strong>{' '}
-            {autosValidos.length > 0
-              ? formatMoney(costoPorAuto)
-              : '— (agrega autos)'}
+            {cantidadPreview > 0 ? formatMoney(costoPorAuto) : '—'}
           </p>
           <p className="text-xs text-gray-500">
-            Solo se abre 1 caja. Si quedan más, podrás abrir otra después.
+            Se crean autos individuales (cada uno cantidad 1). Solo se abre 1 caja.
           </p>
         </div>
 
-        <p className="text-sm text-gray-500 mb-3">Nombres de los autos de esta caja:</p>
-        {autosAbrir.map((auto, i) => (
-          <div key={i} className="flex gap-2 mb-2">
-            <input
-              placeholder={`Auto ${i + 1} - nombre`}
-              value={auto.nombre}
-              onChange={(e) => {
-                const copy = [...autosAbrir];
-                copy[i] = { nombre: e.target.value };
-                setAutosAbrir(copy);
-              }}
-            />
-            {autosAbrir.length > 1 && (
-              <button
-                type="button"
-                className="btn-danger text-xs"
-                onClick={() => setAutosAbrir(autosAbrir.filter((_, idx) => idx !== i))}
-              >
-                Quitar
-              </button>
-            )}
+        <div className="flex gap-2 mb-4">
+          <button
+            type="button"
+            className={modoAbrir === 'lote' ? 'btn-primary text-sm' : 'btn-secondary text-sm'}
+            onClick={() => setModoAbrir('lote')}
+          >
+            Nombre + cantidad
+          </button>
+          <button
+            type="button"
+            className={modoAbrir === 'lista' ? 'btn-primary text-sm' : 'btn-secondary text-sm'}
+            onClick={() => setModoAbrir('lista')}
+          >
+            Lista de nombres
+          </button>
+        </div>
+
+        {modoAbrir === 'lote' ? (
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nombre del auto</label>
+              <input
+                value={loteNombre}
+                onChange={(e) => setLoteNombre(e.target.value)}
+                placeholder="Ej: 99ABCDE Autos"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Cantidad de autos</label>
+              <input
+                type="number"
+                min="1"
+                max="500"
+                value={loteCantidad}
+                onChange={(e) => setLoteCantidad(e.target.value)}
+              />
+            </div>
+            <div className="flex items-end text-xs text-gray-500 pb-2">
+              Se crearán {Number(loteCantidad) || 0} registros individuales
+            </div>
           </div>
-        ))}
-        <button
-          type="button"
-          className="btn-secondary text-sm mb-4"
-          onClick={() => setAutosAbrir([...autosAbrir, { nombre: '' }])}
-        >
-          + Agregar auto
-        </button>
+        ) : (
+          <>
+            <p className="text-sm text-gray-500 mb-3">Nombres distintos de cada auto:</p>
+            {autosAbrir.map((auto, i) => (
+              <div key={i} className="flex gap-2 mb-2">
+                <input
+                  placeholder={`Auto ${i + 1} - nombre`}
+                  value={auto.nombre}
+                  onChange={(e) => {
+                    const copy = [...autosAbrir];
+                    copy[i] = { nombre: e.target.value };
+                    setAutosAbrir(copy);
+                  }}
+                />
+                {autosAbrir.length > 1 && (
+                  <button
+                    type="button"
+                    className="btn-danger text-xs"
+                    onClick={() => setAutosAbrir(autosAbrir.filter((_, idx) => idx !== i))}
+                  >
+                    Quitar
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              className="btn-secondary text-sm mb-4"
+              onClick={() => setAutosAbrir([...autosAbrir, { nombre: '' }])}
+            >
+              + Agregar auto
+            </button>
+          </>
+        )}
+
         <div className="flex justify-end gap-2">
           <button className="btn-secondary" onClick={() => setCajaModal(null)}>Cancelar</button>
           <button className="btn-primary" onClick={handleAbrirCaja}>Abrir esta caja</button>

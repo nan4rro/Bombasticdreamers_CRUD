@@ -7,6 +7,7 @@ import Badge from '../components/Badge';
 
 const emptyForm = {
   fecha: hoy(),
+  proveedor_id: '',
   proveedor_nombre: '',
   tipo_compra: 'mainline',
   descripcion: '',
@@ -21,20 +22,33 @@ const emptyForm = {
 
 export default function Compras() {
   const [compras, setCompras] = useState([]);
+  const [proveedores, setProveedores] = useState([]);
   const [modal, setModal] = useState(false);
+  const [nuevoProvModal, setNuevoProvModal] = useState(false);
+  const [nuevoProvNombre, setNuevoProvNombre] = useState('');
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState('');
 
   const load = () => api.compras.list().then(setCompras).catch(console.error);
-  useEffect(() => { load(); }, []);
+  const loadProveedores = () => api.proveedores.list().then(setProveedores).catch(console.error);
+
+  useEffect(() => {
+    load();
+    loadProveedores();
+  }, []);
 
   const costoTotal = Number(form.costo_producto || 0) + Number(form.transporte || 0) + Number(form.impuestos || 0) + Number(form.otros_gastos || 0);
   const costoUnitario = form.cantidad > 0 ? costoTotal / form.cantidad : 0;
 
   const openNew = () => { setForm(emptyForm); setEditId(null); setError(''); setModal(true); };
   const openEdit = (c) => {
-    setForm({ ...c });
+    setForm({
+      ...emptyForm,
+      ...c,
+      proveedor_id: c.proveedor_id || '',
+      es_caja: c.es_caja !== false && c.es_caja !== 0,
+    });
     setEditId(c.id);
     setError('');
     setModal(true);
@@ -43,9 +57,16 @@ export default function Compras() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!form.proveedor_id && !form.proveedor_nombre) {
+      setError('Selecciona o agrega un proveedor');
+      return;
+    }
     try {
+      const proveedor = proveedores.find((p) => String(p.id) === String(form.proveedor_id));
       const data = {
         ...form,
+        proveedor_id: form.proveedor_id ? Number(form.proveedor_id) : null,
+        proveedor_nombre: proveedor?.nombre || form.proveedor_nombre || null,
         cantidad: Number(form.cantidad),
         costo_producto: Number(form.costo_producto),
         transporte: Number(form.transporte || 0),
@@ -56,6 +77,7 @@ export default function Compras() {
       else await api.compras.create(data);
       setModal(false);
       load();
+      loadProveedores();
     } catch (err) {
       setError(err.message);
     }
@@ -65,6 +87,19 @@ export default function Compras() {
     try {
       await api.compras.recibir(id);
       load();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleCrearProveedor = async (e) => {
+    e.preventDefault();
+    try {
+      const p = await api.proveedores.create({ nombre: nuevoProvNombre.trim() });
+      await loadProveedores();
+      setForm({ ...form, proveedor_id: String(p.id), proveedor_nombre: p.nombre });
+      setNuevoProvNombre('');
+      setNuevoProvModal(false);
     } catch (err) {
       alert(err.message);
     }
@@ -131,7 +166,29 @@ export default function Compras() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Proveedor</label>
-              <input value={form.proveedor_nombre} onChange={set('proveedor_nombre')} placeholder="Nombre proveedor" />
+              <div className="flex gap-2">
+                <select
+                  value={form.proveedor_id}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    const p = proveedores.find((x) => String(x.id) === id);
+                    setForm({
+                      ...form,
+                      proveedor_id: id,
+                      proveedor_nombre: p?.nombre || '',
+                    });
+                  }}
+                  required
+                >
+                  <option value="">Seleccione...</option>
+                  {proveedores.map((p) => (
+                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                  ))}
+                </select>
+                <button type="button" className="btn-secondary whitespace-nowrap" onClick={() => setNuevoProvModal(true)}>
+                  + Nuevo
+                </button>
+              </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
@@ -185,6 +242,19 @@ export default function Compras() {
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
             <button type="submit" className="btn-primary">Guardar</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={nuevoProvModal} onClose={() => setNuevoProvModal(false)} title="Nuevo proveedor">
+        <form onSubmit={handleCrearProveedor} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Nombre</label>
+            <input value={nuevoProvNombre} onChange={(e) => setNuevoProvNombre(e.target.value)} required autoFocus />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" className="btn-secondary" onClick={() => setNuevoProvModal(false)}>Cancelar</button>
+            <button type="submit" className="btn-primary">Agregar</button>
           </div>
         </form>
       </Modal>

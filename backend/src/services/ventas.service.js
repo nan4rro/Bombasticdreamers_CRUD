@@ -31,6 +31,33 @@ export async function obtenerVenta(id) {
 }
 
 export async function crearVenta(data) {
+  if (!data.cliente_nombre && !data.cliente_id) {
+    throw Object.assign(new Error('El cliente es obligatorio'), { status: 400 });
+  }
+  if (!data.metodo_pago) {
+    throw Object.assign(new Error('El método de pago es obligatorio'), { status: 400 });
+  }
+  if (!data.canal) {
+    throw Object.assign(new Error('El canal es obligatorio'), { status: 400 });
+  }
+
+  const { obtenerOCrearPorNombre } = await import('./clientes.service.js');
+  let clienteId = data.cliente_id || null;
+  let clienteNombre = data.cliente_nombre || null;
+
+  if (clienteId) {
+    const c = await getOne('SELECT * FROM clientes WHERE id = $1', [clienteId]);
+    if (c) {
+      clienteNombre = c.nombre;
+    }
+  } else if (clienteNombre) {
+    const c = await obtenerOCrearPorNombre(clienteNombre);
+    if (c) {
+      clienteId = c.id;
+      clienteNombre = c.nombre;
+    }
+  }
+
   return withTransaction(async (client) => {
     let totalVenta = 0;
     let totalCosto = 0;
@@ -73,8 +100,8 @@ export async function crearVenta(data) {
         estado, total_venta, total_costo, utilidad_bruta, live_id, notas
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id
     `, [
-      data.fecha, data.cliente_id || null, data.cliente_nombre || null,
-      data.metodo_pago || 'efectivo', data.canal || 'presencial', data.delivery || 0,
+      data.fecha, clienteId, clienteNombre,
+      data.metodo_pago, data.canal, data.delivery || 0,
       data.estado || 'pagado', totalVenta, totalCosto, utilidadBruta,
       data.live_id || null, data.notas || null,
     ]);
@@ -92,7 +119,7 @@ export async function crearVenta(data) {
       await cajaService.registrarEntradaVenta(ventaId, totalVenta, data.fecha, client);
     }
 
-    await actualizarClienteStats(data.cliente_id, data.cliente_nombre, totalVenta, data.fecha, client);
+    await actualizarClienteStats(clienteId, clienteNombre, totalVenta, data.fecha, client);
 
     return obtenerVenta(ventaId);
   });

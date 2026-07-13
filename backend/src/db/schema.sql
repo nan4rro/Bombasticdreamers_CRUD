@@ -1,8 +1,17 @@
 -- Bombastic Dreamers - Esquema PostgreSQL (Render)
 
+CREATE TABLE IF NOT EXISTS usuarios (
+  id SERIAL PRIMARY KEY,
+  usuario TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  activo BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS proveedores (
   id SERIAL PRIMARY KEY,
-  nombre TEXT NOT NULL,
+  nombre TEXT NOT NULL UNIQUE,
   contacto TEXT,
   notas TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()

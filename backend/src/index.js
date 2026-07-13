@@ -2,7 +2,10 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { initDb } from './db/database.js';
+import { ensureAdminUser } from './services/auth.service.js';
+import { requireAuth } from './middleware/auth.middleware.js';
 
+import authRoutes from './routes/auth.routes.js';
 import comprasRoutes from './routes/compras.routes.js';
 import inventarioRoutes from './routes/inventario.routes.js';
 import ventasRoutes from './routes/ventas.routes.js';
@@ -11,6 +14,8 @@ import cajaRoutes from './routes/caja.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import backupRoutes from './routes/backup.routes.js';
 import resetRoutes from './routes/reset.routes.js';
+import proveedoresRoutes from './routes/proveedores.routes.js';
+import clientesRoutes from './routes/clientes.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -27,6 +32,13 @@ app.use(cors({
 
 app.use(express.json());
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', nombre: 'Bombastic Dreamers Online' });
+});
+
+app.use('/api/auth', authRoutes);
+
+app.use('/api', requireAuth);
 app.use('/api/compras', comprasRoutes);
 app.use('/api/inventario', inventarioRoutes);
 app.use('/api/ventas', ventasRoutes);
@@ -35,10 +47,8 @@ app.use('/api/caja', cajaRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/admin', resetRoutes);
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', nombre: 'Bombastic Dreamers Online' });
-});
+app.use('/api/proveedores', proveedoresRoutes);
+app.use('/api/clientes', clientesRoutes);
 
 async function start() {
   if (!process.env.DATABASE_URL) {
@@ -46,10 +56,10 @@ async function start() {
     process.exit(1);
   }
 
-  // Reintentos: la base de datos puede tardar en estar lista en el primer deploy
   for (let intento = 1; intento <= 10; intento++) {
     try {
       await initDb();
+      await ensureAdminUser();
       console.log('Base de datos conectada e inicializada');
       break;
     } catch (err) {

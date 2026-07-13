@@ -1,10 +1,31 @@
 import { getOne, getAll, query } from '../db/database.js';
 import { calcularCostoTotal, calcularCostoUnitario, generarCodigoInterno } from '../utils/calculos.js';
+import * as proveedoresService from './proveedores.service.js';
 
 const TIPOS_COMPRA_A_CATEGORIA = {
   mainline: 'mainline', premium: 'premium', rlc: 'rlc', protector: 'protector',
   sticker: 'sticker', tarjeta: 'tarjeta', accesorio: 'accesorio', otro: 'otro',
 };
+
+async function resolverProveedor(data) {
+  let proveedorId = data.proveedor_id || null;
+  let proveedorNombre = data.proveedor_nombre || null;
+
+  if (proveedorId) {
+    const p = await getOne('SELECT * FROM proveedores WHERE id = $1', [proveedorId]);
+    if (p) {
+      proveedorNombre = p.nombre;
+      return { proveedorId: p.id, proveedorNombre: p.nombre };
+    }
+  }
+
+  if (proveedorNombre) {
+    const p = await proveedoresService.obtenerOCrearPorNombre(proveedorNombre);
+    if (p) return { proveedorId: p.id, proveedorNombre: p.nombre };
+  }
+
+  return { proveedorId: null, proveedorNombre: null };
+}
 
 export async function listarCompras(filtros = {}) {
   let sql = 'SELECT * FROM compras WHERE 1=1';
@@ -26,7 +47,7 @@ export async function obtenerCompra(id) {
 export async function crearCompra(data) {
   const costoTotal = calcularCostoTotal(data.costo_producto, data.transporte, data.impuestos, data.otros_gastos);
   const costoUnitario = calcularCostoUnitario(costoTotal, data.cantidad);
-
+  const { proveedorId, proveedorNombre } = await resolverProveedor(data);
   const estado = data.estado || 'en_camino';
 
   const res = await query(`
@@ -35,7 +56,7 @@ export async function crearCompra(data) {
       costo_producto, transporte, impuestos, otros_gastos, costo_total, costo_unitario, es_caja, estado
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id
   `, [
-    data.fecha, data.proveedor_id || null, data.proveedor_nombre || null,
+    data.fecha, proveedorId, proveedorNombre,
     data.tipo_compra, data.descripcion, data.cantidad,
     data.costo_producto || 0, data.transporte || 0, data.impuestos || 0, data.otros_gastos || 0,
     costoTotal, costoUnitario, data.es_caja !== false, estado,

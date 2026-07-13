@@ -40,7 +40,15 @@ router.delete('/:id', asyncHandler(async (req, res) => {
 }));
 
 router.post('/:id/abrir-caja', asyncHandler(async (req, res) => {
-  const result = await inventarioService.abrirCaja(Number(req.params.id), req.body.autos || []);
+  const result = await inventarioService.abrirCaja(
+    Number(req.params.id),
+    req.body.autos || [],
+    {
+      nombre: req.body.nombre,
+      nombre_lote: req.body.nombre_lote,
+      cantidad: req.body.cantidad,
+    }
+  );
   res.json(result);
 }));
 

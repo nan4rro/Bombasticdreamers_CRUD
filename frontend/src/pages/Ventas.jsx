@@ -10,14 +10,18 @@ const emptyItem = { inventario_id: '', producto_nombre: '', cantidad: 1, precio_
 export default function Ventas() {
   const [ventas, setVentas] = useState([]);
   const [inventario, setInventario] = useState([]);
+  const [clientes, setClientes] = useState([]);
   const [modal, setModal] = useState(false);
   const [detalle, setDetalle] = useState(null);
+  const [nuevoClienteModal, setNuevoClienteModal] = useState(false);
+  const [nuevoCliente, setNuevoCliente] = useState({ nombre: '', whatsapp: '', ciudad: '' });
   const [recalcLoading, setRecalcLoading] = useState(false);
   const [form, setForm] = useState({
     fecha: hoy(),
+    cliente_id: '',
     cliente_nombre: '',
-    metodo_pago: 'efectivo',
-    canal: 'presencial',
+    metodo_pago: '',
+    canal: '',
     delivery: '',
     estado: 'pagado',
     notas: '',
@@ -26,17 +30,21 @@ export default function Ventas() {
   const [error, setError] = useState('');
 
   const load = () => api.ventas.list().then(setVentas).catch(console.error);
+  const loadClientes = () => api.clientes.list().then(setClientes).catch(console.error);
+
   useEffect(() => {
     load();
+    loadClientes();
     api.inventario.list({ estado: 'disponible' }).then(setInventario).catch(console.error);
   }, []);
 
   const openNew = () => {
     setForm({
       fecha: hoy(),
+      cliente_id: '',
       cliente_nombre: '',
-      metodo_pago: 'efectivo',
-      canal: 'presencial',
+      metodo_pago: '',
+      canal: '',
       delivery: '',
       estado: 'pagado',
       notas: '',
@@ -76,9 +84,24 @@ export default function Ventas() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!form.cliente_id) {
+      setError('Debes seleccionar un cliente');
+      return;
+    }
+    if (!form.metodo_pago) {
+      setError('Debes seleccionar el método de pago');
+      return;
+    }
+    if (!form.canal) {
+      setError('Debes seleccionar el canal');
+      return;
+    }
     try {
+      const cliente = clientes.find((c) => String(c.id) === String(form.cliente_id));
       await api.ventas.create({
         ...form,
+        cliente_id: Number(form.cliente_id),
+        cliente_nombre: cliente?.nombre || form.cliente_nombre,
         delivery: Number(form.delivery || 0),
         items: form.items.map((i) => ({
           inventario_id: i.inventario_id ? Number(i.inventario_id) : null,
@@ -90,9 +113,23 @@ export default function Ventas() {
       });
       setModal(false);
       load();
+      loadClientes();
       api.inventario.list({ estado: 'disponible' }).then(setInventario);
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleCrearCliente = async (e) => {
+    e.preventDefault();
+    try {
+      const c = await api.clientes.create(nuevoCliente);
+      await loadClientes();
+      setForm({ ...form, cliente_id: String(c.id), cliente_nombre: c.nombre });
+      setNuevoCliente({ nombre: '', whatsapp: '', ciudad: '' });
+      setNuevoClienteModal(false);
+    } catch (err) {
+      alert(err.message);
     }
   };
 
@@ -184,18 +221,46 @@ export default function Ventas() {
               <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Cliente</label>
-              <input value={form.cliente_nombre} onChange={(e) => setForm({ ...form, cliente_nombre: e.target.value })} />
+              <label className="block text-xs font-medium text-gray-600 mb-1">Cliente *</label>
+              <div className="flex gap-2">
+                <select
+                  value={form.cliente_id}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    const c = clientes.find((x) => String(x.id) === id);
+                    setForm({ ...form, cliente_id: id, cliente_nombre: c?.nombre || '' });
+                  }}
+                  required
+                >
+                  <option value="">Seleccione...</option>
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+                <button type="button" className="btn-secondary whitespace-nowrap" onClick={() => setNuevoClienteModal(true)}>
+                  + Nuevo
+                </button>
+              </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Método de pago</label>
-              <select value={form.metodo_pago} onChange={(e) => setForm({ ...form, metodo_pago: e.target.value })}>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Método de pago *</label>
+              <select
+                value={form.metodo_pago}
+                onChange={(e) => setForm({ ...form, metodo_pago: e.target.value })}
+                required
+              >
+                <option value="">Seleccione...</option>
                 {METODOS_PAGO.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Canal</label>
-              <select value={form.canal} onChange={(e) => setForm({ ...form, canal: e.target.value })}>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Canal *</label>
+              <select
+                value={form.canal}
+                onChange={(e) => setForm({ ...form, canal: e.target.value })}
+                required
+              >
+                <option value="">Seleccione...</option>
                 {CANALES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
@@ -271,6 +336,38 @@ export default function Ventas() {
         </form>
       </Modal>
 
+      <Modal open={nuevoClienteModal} onClose={() => setNuevoClienteModal(false)} title="Nuevo cliente">
+        <form onSubmit={handleCrearCliente} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Nombre *</label>
+            <input
+              value={nuevoCliente.nombre}
+              onChange={(e) => setNuevoCliente({ ...nuevoCliente, nombre: e.target.value })}
+              required
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">WhatsApp</label>
+            <input
+              value={nuevoCliente.whatsapp}
+              onChange={(e) => setNuevoCliente({ ...nuevoCliente, whatsapp: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Ciudad</label>
+            <input
+              value={nuevoCliente.ciudad}
+              onChange={(e) => setNuevoCliente({ ...nuevoCliente, ciudad: e.target.value })}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" className="btn-secondary" onClick={() => setNuevoClienteModal(false)}>Cancelar</button>
+            <button type="submit" className="btn-primary">Agregar</button>
+          </div>
+        </form>
+      </Modal>
+
       <Modal open={!!detalle} onClose={() => setDetalle(null)} title={`Venta #${detalle?.id || ''}`} wide>
         {detalle && (
           <div className="space-y-4">
@@ -280,11 +377,6 @@ export default function Ventas() {
               <p><strong>Total:</strong> {formatMoney(detalle.total_venta)}</p>
               <p><strong>Utilidad:</strong> <span className="text-green-600">{formatMoney(detalle.utilidad_bruta)}</span></p>
             </div>
-
-            <p className="text-xs text-gray-500">
-              Puedes corregir el costo unitario de cada producto. La utilidad se recalcula sola.
-            </p>
-
             <table>
               <thead>
                 <tr>
@@ -331,7 +423,6 @@ export default function Ventas() {
                 ))}
               </tbody>
             </table>
-
             <div className="flex justify-end">
               <button className="btn-secondary" onClick={() => setDetalle(null)}>Cerrar</button>
             </div>
