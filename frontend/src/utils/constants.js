@@ -10,20 +10,20 @@ export const TIPOS_COMPRA = [
 ];
 
 export const ESTADOS_COMPRA = [
-  { value: 'en_camino', label: 'En camino', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'recibido', label: 'Recibido', color: 'bg-green-100 text-green-800' },
-  { value: 'vendido_parcialmente', label: 'Vendido parcial', color: 'bg-blue-100 text-blue-800' },
-  { value: 'cerrado', label: 'Cerrado', color: 'bg-gray-100 text-gray-600' },
+  { value: 'en_camino', label: 'En camino', color: 'bg-[#ffcc00]/20 text-[#ffcc00]' },
+  { value: 'recibido', label: 'Recibido', color: 'bg-emerald-500/15 text-emerald-300' },
+  { value: 'vendido_parcialmente', label: 'Vendido parcial', color: 'bg-sky-500/15 text-sky-300' },
+  { value: 'cerrado', label: 'Cerrado', color: 'bg-white/10 text-gray-400' },
 ];
 
 export const CATEGORIAS = TIPOS_COMPRA;
 
 export const ESTADOS_INVENTARIO = [
-  { value: 'disponible', label: 'Disponible', color: 'bg-green-100 text-green-800' },
-  { value: 'reservado', label: 'Reservado', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'vendido', label: 'Vendido', color: 'bg-gray-100 text-gray-600' },
-  { value: 'premio', label: 'Premio', color: 'bg-purple-100 text-purple-800' },
-  { value: 'danado', label: 'Dañado', color: 'bg-red-100 text-red-800' },
+  { value: 'disponible', label: 'Disponible', color: 'bg-emerald-500/15 text-emerald-300' },
+  { value: 'reservado', label: 'Reservado', color: 'bg-[#ffcc00]/20 text-[#ffcc00]' },
+  { value: 'vendido', label: 'Vendido', color: 'bg-white/10 text-gray-400' },
+  { value: 'premio', label: 'Premio', color: 'bg-violet-500/15 text-violet-300' },
+  { value: 'danado', label: 'Dañado', color: 'bg-red-500/15 text-red-300' },
 ];
 
 export const TIPOS_ITEM = [
@@ -48,10 +48,10 @@ export const CANALES = [
 ];
 
 export const ESTADOS_VENTA = [
-  { value: 'pendiente', label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'pagado', label: 'Pagado', color: 'bg-green-100 text-green-800' },
-  { value: 'entregado', label: 'Entregado', color: 'bg-blue-100 text-blue-800' },
-  { value: 'cancelado', label: 'Cancelado', color: 'bg-red-100 text-red-800' },
+  { value: 'pendiente', label: 'Pendiente', color: 'bg-[#ffcc00]/20 text-[#ffcc00]' },
+  { value: 'pagado', label: 'Pagado', color: 'bg-emerald-500/15 text-emerald-300' },
+  { value: 'entregado', label: 'Entregado', color: 'bg-sky-500/15 text-sky-300' },
+  { value: 'cancelado', label: 'Cancelado', color: 'bg-red-500/15 text-red-300' },
 ];
 
 export const CATEGORIAS_GASTO = [
@@ -78,5 +78,5 @@ export function labelOf(list, value) {
 }
 
 export function badgeClass(list, value) {
-  return list.find((i) => i.value === value)?.color || 'bg-gray-100 text-gray-600';
+  return list.find((i) => i.value === value)?.color || 'bg-white/10 text-gray-400';
 }

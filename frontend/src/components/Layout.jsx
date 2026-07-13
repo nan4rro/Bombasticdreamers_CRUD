@@ -22,11 +22,14 @@ export default function Layout() {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="w-56 bg-gray-900 text-white flex flex-col shrink-0">
-        <div className="p-5 border-b border-gray-700">
-          <h1 className="text-lg font-bold leading-tight">Bombastic</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Dreamers</p>
-          {user?.usuario && <p className="text-xs text-gray-500 mt-2">👤 {user.usuario}</p>}
+      <aside className="w-60 bg-black text-white flex flex-col shrink-0 border-r border-[#2a2a2a]">
+        <div className="p-4 border-b border-[#2a2a2a] flex items-center gap-3">
+          <img src="/logo.png" alt="Bombastic Dreamers" className="w-12 h-12 object-contain shrink-0" />
+          <div>
+            <h1 className="font-display text-2xl leading-none text-[#ffcc00]">BOMBASTIC</h1>
+            <p className="text-[11px] text-gray-400 tracking-[0.2em] uppercase mt-0.5">Dreamers</p>
+            {user?.usuario && <p className="text-xs text-gray-500 mt-2">👤 {user.usuario}</p>}
+          </div>
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map((item) => (
@@ -36,7 +39,9 @@ export default function Layout() {
               end={item.to === '/'}
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? 'bg-red-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  isActive
+                    ? 'bg-[#ffcc00] text-black'
+                    : 'text-gray-400 hover:bg-[#1a1a1a] hover:text-[#ffcc00]'
                 }`
               }
             >
@@ -45,16 +50,16 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
-        <div className="p-3 border-t border-gray-700 space-y-1">
+        <div className="p-3 border-t border-[#2a2a2a] space-y-1">
           <button
             onClick={() => api.backup()}
-            className="w-full text-left px-3 py-2 text-xs text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="w-full text-left px-3 py-2 text-xs text-gray-500 hover:text-[#ffcc00] rounded-lg hover:bg-[#1a1a1a] transition-colors"
           >
             💾 Backup BD
           </button>
           <button
             onClick={handleLogout}
-            className="w-full text-left px-3 py-2 text-xs text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="w-full text-left px-3 py-2 text-xs text-gray-500 hover:text-[#ffcc00] rounded-lg hover:bg-[#1a1a1a] transition-colors"
           >
             🚪 Cerrar sesión
           </button>

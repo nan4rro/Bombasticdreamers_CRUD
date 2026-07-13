@@ -1,21 +1,50 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --color-brand: #e63946;
-  --color-brand-dark: #c1121f;
-  --color-surface: #f8f9fa;
-  --color-card: #ffffff;
+  --font-sans: 'Outfit', system-ui, sans-serif;
+  --font-display: 'Bebas Neue', 'Oswald', sans-serif;
+  --color-brand: #ffcc00;
+  --color-brand-dark: #e6b800;
+  --color-brand-dim: #c9a000;
+  --color-ink: #000000;
+  --color-surface: #0a0a0a;
+  --color-surface-2: #121212;
+  --color-card: #161616;
+  --color-border: #2a2a2a;
+  --color-muted: #9ca3af;
+  --color-fg: #f5f5f5;
 }
 
 body {
   font-family: var(--font-sans);
   background: var(--color-surface);
+  color: var(--color-fg);
   margin: 0;
+  min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 100% -20%, rgba(255, 204, 0, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 0% 100%, rgba(255, 204, 0, 0.05), transparent);
 }
 
 input, select, textarea {
-  @apply border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent;
+  @apply border rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:border-transparent;
+  background: #0f0f0f;
+  border-color: var(--color-border);
+  color: var(--color-fg);
+}
+
+input:focus, select:focus, textarea:focus {
+  --tw-ring-color: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
+input::placeholder, textarea::placeholder {
+  color: #6b7280;
+}
+
+option {
+  background: #161616;
+  color: var(--color-fg);
 }
 
 button {
@@ -27,49 +56,117 @@ table {
 }
 
 th {
-  @apply text-left text-gray-500 font-medium px-4 py-3 border-b bg-gray-50;
+  @apply text-left font-medium px-4 py-3 border-b;
+  color: var(--color-muted);
+  border-color: var(--color-border);
+  background: #111111;
 }
 
 td {
-  @apply px-4 py-3 border-b border-gray-100;
+  @apply px-4 py-3 border-b;
+  border-color: var(--color-border);
+}
+
+tr:hover td {
+  background: rgba(255, 204, 0, 0.03);
 }
 
 .card {
-  @apply bg-white rounded-xl shadow-sm border border-gray-100 p-5;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  @apply rounded-xl p-5;
+  box-shadow: 0 0 0 1px rgba(255, 204, 0, 0.02);
 }
 
 .btn-primary {
-  @apply bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition-colors;
+  background: var(--color-brand);
+  color: #000;
+  @apply font-semibold px-4 py-2 rounded-lg transition-colors;
+}
+
+.btn-primary:hover {
+  background: var(--color-brand-dark);
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .btn-secondary {
-  @apply bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-4 py-2 rounded-lg transition-colors;
+  background: #222;
+  color: var(--color-fg);
+  border: 1px solid var(--color-border);
+  @apply font-medium px-4 py-2 rounded-lg transition-colors;
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+  background: #1a1a1a;
 }
 
 .btn-danger {
-  @apply bg-red-50 hover:bg-red-100 text-red-700 font-medium px-3 py-1.5 rounded-lg text-sm transition-colors;
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  @apply font-medium px-3 py-1.5 rounded-lg text-sm transition-colors;
+}
+
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.22);
 }
 
 .stat-card {
-  @apply bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col gap-1;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  @apply rounded-xl p-4 flex flex-col gap-1;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-brand), transparent);
 }
 
 .stat-label {
-  @apply text-xs text-gray-500 uppercase tracking-wide font-medium;
+  @apply text-xs uppercase tracking-wide font-medium;
+  color: var(--color-muted);
 }
 
 .stat-value {
-  @apply text-2xl font-bold text-gray-900;
+  @apply text-2xl font-bold;
+  color: var(--color-fg);
 }
 
 .stat-value.positive {
-  @apply text-green-600;
+  color: #86efac;
 }
 
 .stat-value.negative {
-  @apply text-red-600;
+  color: #fca5a5;
 }
 
 .badge {
   @apply inline-block px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+.panel-muted {
+  background: #111;
+  border: 1px solid var(--color-border);
+  @apply rounded-lg p-3 text-sm;
+}
+
+.text-brand {
+  color: var(--color-brand);
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
 }

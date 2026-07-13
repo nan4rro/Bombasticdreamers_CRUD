@@ -235,7 +235,7 @@ export default function Compras() {
               <input type="number" min="0" step="0.01" value={form.otros_gastos} onChange={set('otros_gastos')} />
             </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-sm">
+          <div className="panel-muted">
             <p><strong>Costo total:</strong> {formatMoney(costoTotal)}</p>
             <p><strong>Costo unitario:</strong> {formatMoney(costoUnitario)}</p>
           </div>

@@ -324,7 +324,7 @@ export default function Ventas() {
             </button>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-3 text-sm">
+          <div className="panel-muted">
             <p><strong>Total venta:</strong> {formatMoney(totalVenta)}</p>
             <p><strong>Utilidad bruta:</strong> {formatMoney(totalUtilidad)}</p>
           </div>

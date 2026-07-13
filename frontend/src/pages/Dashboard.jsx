@@ -16,19 +16,19 @@ function StatCard({ label, value, positive, negative, hint }) {
 function BadgeRec({ rec }) {
   if (!rec) return null;
   const colors = {
-    excelente: 'bg-green-100 text-green-800',
-    bueno: 'bg-blue-100 text-blue-800',
-    regular: 'bg-yellow-100 text-yellow-800',
-    malo: 'bg-red-100 text-red-800',
+    excelente: 'bg-emerald-500/15 text-emerald-300',
+    bueno: 'bg-[#ffcc00]/20 text-[#ffcc00]',
+    regular: 'bg-amber-500/15 text-amber-300',
+    malo: 'bg-red-500/15 text-red-300',
   };
-  return <span className={`badge ${colors[rec.nivel] || 'bg-gray-100'}`}>{rec.texto}</span>;
+  return <span className={`badge ${colors[rec.nivel] || 'bg-white/10 text-gray-400'}`}>{rec.texto}</span>;
 }
 
 function Section({ title, subtitle, children }) {
   return (
     <div className="card overflow-x-auto">
       <div className="mb-4">
-        <h3 className="font-semibold text-gray-900">{title}</h3>
+        <h3 className="font-semibold text-[#ffcc00]">{title}</h3>
         {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
       </div>
       {children}
@@ -110,15 +110,15 @@ export default function Dashboard() {
           <div className="grid md:grid-cols-3 gap-4 mb-6">
             <div className="card">
               <p className="stat-label">Proveedores a seguir</p>
-              <p className="text-3xl font-bold text-green-600">{data.resumen_decisiones?.proveedores_seguir ?? 0}</p>
+              <p className="text-3xl font-bold text-emerald-400">{data.resumen_decisiones?.proveedores_seguir ?? 0}</p>
             </div>
             <div className="card">
               <p className="stat-label">Proveedores a revisar</p>
-              <p className="text-3xl font-bold text-red-600">{data.resumen_decisiones?.proveedores_revisar ?? 0}</p>
+              <p className="text-3xl font-bold text-red-400">{data.resumen_decisiones?.proveedores_revisar ?? 0}</p>
             </div>
             <div className="card">
               <p className="stat-label">Cajas que ya recuperaron costo</p>
-              <p className="text-3xl font-bold text-blue-600">
+              <p className="text-3xl font-bold text-[#ffcc00]">
                 {data.resumen_decisiones?.cajas_recuperadas ?? 0}
                 <span className="text-sm text-gray-400 font-normal"> / {(data.cajas_todas || []).length}</span>
               </p>
@@ -140,7 +140,7 @@ export default function Dashboard() {
                         <td>{p.producto_nombre}</td>
                         <td>{p.total_vendido}</td>
                         <td>{formatMoney(p.ingresos)}</td>
-                        <td className="text-green-600">{formatMoney(p.utilidad)}</td>
+                        <td className="text-emerald-400">{formatMoney(p.utilidad)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -211,14 +211,14 @@ export default function Dashboard() {
                     <td>{c.unidades_vendidas}</td>
                     <td>{Number(c.pct_vendido || 0).toFixed(0)}%</td>
                     <td>{formatMoney(c.ingresos)}</td>
-                    <td className={c.utilidad >= 0 ? 'text-green-600' : 'text-red-600'}>{formatMoney(c.utilidad)}</td>
+                    <td className={c.utilidad >= 0 ? 'text-emerald-400' : 'text-red-400'}>{formatMoney(c.utilidad)}</td>
                     <td>{Number(c.margen || 0).toFixed(1)}%</td>
                     <td>{Number(c.roi || 0).toFixed(1)}%</td>
                     <td>{c.dias_promedio_venta != null ? `${c.dias_promedio_venta}d` : '—'}</td>
                     <td>
                       {c.recuperado
-                        ? <span className="badge bg-green-100 text-green-800">Recuperó costo</span>
-                        : <span className="badge bg-yellow-100 text-yellow-800">En proceso</span>}
+                        ? <span className="badge bg-emerald-500/15 text-emerald-300">Recuperó costo</span>
+                        : <span className="badge bg-[#ffcc00]/20 text-[#ffcc00]">En proceso</span>}
                     </td>
                   </tr>
                 ))}
@@ -259,7 +259,7 @@ export default function Dashboard() {
                     <td>{formatMoney(p.valor_stock)}</td>
                     <td>{p.unidades_vendidas}</td>
                     <td>{formatMoney(p.ingresos)}</td>
-                    <td className={p.utilidad >= 0 ? 'text-green-600' : 'text-red-600'}>{formatMoney(p.utilidad)}</td>
+                    <td className={p.utilidad >= 0 ? 'text-emerald-400' : 'text-red-400'}>{formatMoney(p.utilidad)}</td>
                     <td>{Number(p.margen || 0).toFixed(1)}%</td>
                     <td>{Number(p.roi || 0).toFixed(1)}%</td>
                     <td>{p.dias_promedio_venta != null ? `${p.dias_promedio_venta} días` : '—'}</td>
@@ -289,7 +289,7 @@ export default function Dashboard() {
                     <td>{c.canal}</td>
                     <td>{c.ventas}</td>
                     <td>{formatMoney(c.total)}</td>
-                    <td className="text-green-600">{formatMoney(c.utilidad)}</td>
+                    <td className="text-emerald-400">{formatMoney(c.utilidad)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -297,7 +297,7 @@ export default function Dashboard() {
           </Section>
 
           <Section title="Qué se vende más rápido / lento">
-            <h4 className="text-sm font-medium mb-2 text-green-700">Más rápidos</h4>
+            <h4 className="text-sm font-medium mb-2 text-emerald-400">Más rápidos</h4>
             <table className="mb-4">
               <thead><tr><th>Producto</th><th>Días</th><th>Vendidos</th></tr></thead>
               <tbody>
@@ -310,7 +310,7 @@ export default function Dashboard() {
                 ))}
               </tbody>
             </table>
-            <h4 className="text-sm font-medium mb-2 text-red-700">Más lentos</h4>
+            <h4 className="text-sm font-medium mb-2 text-red-400">Más lentos</h4>
             <table>
               <thead><tr><th>Producto</th><th>Días</th><th>Vendidos</th></tr></thead>
               <tbody>
@@ -337,7 +337,7 @@ export default function Dashboard() {
                   <tr key={i}>
                     <td>{p.producto_nombre}</td>
                     <td>{p.vendidos}</td>
-                    <td className="text-green-600">{formatMoney(p.utilidad)}</td>
+                    <td className="text-emerald-400">{formatMoney(p.utilidad)}</td>
                     <td>{Number(p.margen || 0).toFixed(1)}%</td>
                   </tr>
                 ))}
@@ -352,7 +352,7 @@ export default function Dashboard() {
                   <tr key={i}>
                     <td>{p.producto_nombre}</td>
                     <td>{p.vendidos}</td>
-                    <td className={Number(p.utilidad) >= 0 ? 'text-green-600' : 'text-red-600'}>{formatMoney(p.utilidad)}</td>
+                    <td className={Number(p.utilidad) >= 0 ? 'text-emerald-400' : 'text-red-400'}>{formatMoney(p.utilidad)}</td>
                     <td>{Number(p.margen || 0).toFixed(1)}%</td>
                   </tr>
                 ))}

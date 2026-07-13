@@ -304,7 +304,7 @@ export default function Inventario() {
       </Modal>
 
       <Modal open={!!cajaModal} onClose={() => setCajaModal(null)} title={`Abrir 1 caja: ${cajaModal?.nombre}`} wide>
-        <div className="bg-gray-50 rounded-lg p-3 text-sm mb-4 space-y-1">
+        <div className="panel-muted mb-4 space-y-1">
           <p><strong>Cajas disponibles:</strong> {cajaModal?.cantidad}</p>
           <p><strong>Costo por caja:</strong> {formatMoney(cajaModal?.costo_unitario)}</p>
           <p><strong>Autos a crear:</strong> {cantidadPreview || '—'}</p>
