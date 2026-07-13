@@ -5,7 +5,19 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 const router = Router();
 
 router.get('/', asyncHandler(async (req, res) => {
-  res.json(await dashboardService.obtenerDashboard());
+  res.json(await dashboardService.obtenerDashboardDecisiones());
+}));
+
+router.get('/decisiones', asyncHandler(async (req, res) => {
+  res.json(await dashboardService.obtenerDashboardDecisiones());
+}));
+
+router.get('/cajas', asyncHandler(async (req, res) => {
+  res.json(await dashboardService.rentabilidadPorCaja());
+}));
+
+router.get('/proveedores', asyncHandler(async (req, res) => {
+  res.json(await dashboardService.rentabilidadPorProveedor());
 }));
 
 router.get('/reporte', asyncHandler(async (req, res) => {
