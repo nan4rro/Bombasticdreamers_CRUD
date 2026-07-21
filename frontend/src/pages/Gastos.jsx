@@ -3,6 +3,8 @@ import { api, formatMoney, formatDate, hoy } from '../api/client';
 import { CATEGORIAS_GASTO, labelOf } from '../utils/constants';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 const emptyForm = {
   fecha: hoy(),
@@ -36,6 +38,7 @@ export default function Gastos() {
   };
 
   const total = gastos.reduce((s, g) => s + g.monto, 0);
+  const pager = usePagination(gastos, 10);
 
   return (
     <div>
@@ -45,67 +48,70 @@ export default function Gastos() {
         action={<button className="btn-primary" onClick={() => { setForm(emptyForm); setModal(true); }}>+ Nuevo gasto</button>}
       />
 
-      <div className="stat-card mb-4 inline-flex">
+      <div className="stat-card mb-4 w-full sm:w-auto sm:inline-flex">
         <span className="stat-label">Total gastos registrados</span>
         <span className="stat-value negative">{formatMoney(total)}</span>
       </div>
 
-      <div className="card overflow-x-auto">
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Categoría</th>
-              <th>Descripción</th>
-              <th>Monto</th>
-              <th>Pago</th>
-              <th>Relación</th>
-            </tr>
-          </thead>
-          <tbody>
-            {gastos.map((g) => (
-              <tr key={g.id}>
-                <td>{formatDate(g.fecha)}</td>
-                <td>{labelOf(CATEGORIAS_GASTO, g.categoria)}</td>
-                <td>{g.descripcion}</td>
-                <td className="text-red-600 font-medium">{formatMoney(g.monto)}</td>
-                <td>{g.metodo_pago}</td>
-                <td>{g.relacion_tipo}</td>
+      <div className="card">
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Categoría</th>
+                <th>Descripción</th>
+                <th>Monto</th>
+                <th>Pago</th>
+                <th>Relación</th>
               </tr>
-            ))}
-            {gastos.length === 0 && (
-              <tr><td colSpan={6} className="text-center text-gray-400 py-8">No hay gastos registrados</td></tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {pager.pageItems.map((g) => (
+                <tr key={g.id}>
+                  <td>{formatDate(g.fecha)}</td>
+                  <td>{labelOf(CATEGORIAS_GASTO, g.categoria)}</td>
+                  <td>{g.descripcion}</td>
+                  <td className="text-red-400 font-medium">{formatMoney(g.monto)}</td>
+                  <td>{g.metodo_pago}</td>
+                  <td>{g.relacion_tipo}</td>
+                </tr>
+              ))}
+              {gastos.length === 0 && (
+                <tr><td colSpan={6} className="text-center text-gray-400 py-8">No hay gastos registrados</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <Pagination {...pager} />
       </div>
 
       <Modal open={modal} onClose={() => setModal(false)} title="Nuevo gasto">
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+          {error && <p className="text-red-400 text-sm">{error}</p>}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Fecha</label>
             <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Categoría</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Categoría</label>
             <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
               {CATEGORIAS_GASTO.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Descripción</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Descripción</label>
             <input value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} required />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Monto</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Monto</label>
             <input type="number" min="0" step="0.01" value={form.monto} onChange={(e) => setForm({ ...form, monto: e.target.value })} required />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Método de pago</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1">Método de pago</label>
             <input value={form.metodo_pago} onChange={(e) => setForm({ ...form, metodo_pago: e.target.value })} />
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
             <button type="submit" className="btn-primary">Guardar</button>
           </div>

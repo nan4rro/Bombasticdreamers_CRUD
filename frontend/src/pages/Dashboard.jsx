@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api, formatMoney } from '../api/client';
 import PageHeader from '../components/PageHeader';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 function StatCard({ label, value, positive, negative, hint }) {
   const cls = positive ? 'positive' : negative ? 'negative' : '';
@@ -26,7 +28,7 @@ function BadgeRec({ rec }) {
 
 function Section({ title, subtitle, children }) {
   return (
-    <div className="card overflow-x-auto">
+    <div className="card">
       <div className="mb-4">
         <h3 className="font-semibold text-[#ffcc00]">{title}</h3>
         {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
@@ -48,6 +50,9 @@ export default function Dashboard() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const cajasPager = usePagination(data?.cajas_todas || [], 10);
+  const provPager = usePagination(data?.proveedores || [], 10);
 
   if (loading) return <p className="text-gray-500">Cargando métricas de decisión...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
@@ -73,7 +78,7 @@ export default function Dashboard() {
           <button
             key={t.id}
             type="button"
-            className={tab === t.id ? 'btn-primary text-sm' : 'btn-secondary text-sm'}
+            className={`text-sm !min-h-0 !py-2 ${tab === t.id ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => setTab(t.id)}
           >
             {t.label}
@@ -181,49 +186,54 @@ export default function Dashboard() {
           {(data.cajas_todas || []).length === 0 ? (
             <p className="text-gray-400 text-sm">Aún no hay cajas abiertas con ventas asociadas. Abre cajas desde Inventario y vende esos autos.</p>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Caja</th>
-                  <th>Proveedor</th>
-                  <th>Costo caja</th>
-                  <th>Autos</th>
-                  <th>Vendidos</th>
-                  <th>% vendido</th>
-                  <th>Ingresos</th>
-                  <th>Utilidad</th>
-                  <th>Margen</th>
-                  <th>ROI</th>
-                  <th>Días prom.</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data.cajas_todas || []).map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      <div className="font-medium">{c.nombre}</div>
-                      <div className="text-xs text-gray-400">{c.codigo_interno}</div>
-                    </td>
-                    <td>{c.proveedor_nombre || '-'}</td>
-                    <td>{formatMoney(c.costo_caja)}</td>
-                    <td>{c.autos_totales}</td>
-                    <td>{c.unidades_vendidas}</td>
-                    <td>{Number(c.pct_vendido || 0).toFixed(0)}%</td>
-                    <td>{formatMoney(c.ingresos)}</td>
-                    <td className={c.utilidad >= 0 ? 'text-emerald-400' : 'text-red-400'}>{formatMoney(c.utilidad)}</td>
-                    <td>{Number(c.margen || 0).toFixed(1)}%</td>
-                    <td>{Number(c.roi || 0).toFixed(1)}%</td>
-                    <td>{c.dias_promedio_venta != null ? `${c.dias_promedio_venta}d` : '—'}</td>
-                    <td>
-                      {c.recuperado
-                        ? <span className="badge bg-emerald-500/15 text-emerald-300">Recuperó costo</span>
-                        : <span className="badge bg-[#ffcc00]/20 text-[#ffcc00]">En proceso</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Caja</th>
+                      <th>Proveedor</th>
+                      <th>Costo caja</th>
+                      <th>Autos</th>
+                      <th>Vendidos</th>
+                      <th>% vendido</th>
+                      <th>Ingresos</th>
+                      <th>Utilidad</th>
+                      <th>Margen</th>
+                      <th>ROI</th>
+                      <th>Días prom.</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cajasPager.pageItems.map((c) => (
+                      <tr key={c.id}>
+                        <td>
+                          <div className="font-medium">{c.nombre}</div>
+                          <div className="text-xs text-gray-400">{c.codigo_interno}</div>
+                        </td>
+                        <td>{c.proveedor_nombre || '-'}</td>
+                        <td>{formatMoney(c.costo_caja)}</td>
+                        <td>{c.autos_totales}</td>
+                        <td>{c.unidades_vendidas}</td>
+                        <td>{Number(c.pct_vendido || 0).toFixed(0)}%</td>
+                        <td>{formatMoney(c.ingresos)}</td>
+                        <td className={c.utilidad >= 0 ? 'text-emerald-400' : 'text-red-400'}>{formatMoney(c.utilidad)}</td>
+                        <td>{Number(c.margen || 0).toFixed(1)}%</td>
+                        <td>{Number(c.roi || 0).toFixed(1)}%</td>
+                        <td>{c.dias_promedio_venta != null ? `${c.dias_promedio_venta}d` : '—'}</td>
+                        <td>
+                          {c.recuperado
+                            ? <span className="badge bg-emerald-500/15 text-emerald-300">Recuperó costo</span>
+                            : <span className="badge bg-[#ffcc00]/20 text-[#ffcc00]">En proceso</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination {...cajasPager} />
+            </>
           )}
         </Section>
       )}
@@ -236,38 +246,43 @@ export default function Dashboard() {
           {(data.proveedores || []).length === 0 ? (
             <p className="text-gray-400 text-sm">Sin datos de proveedores aún</p>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Proveedor</th>
-                  <th>Comprado</th>
-                  <th>Stock $</th>
-                  <th>Vendidos</th>
-                  <th>Ingresos</th>
-                  <th>Utilidad</th>
-                  <th>Margen</th>
-                  <th>ROI</th>
-                  <th>Días a vender</th>
-                  <th>Decisión</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.proveedores.map((p, i) => (
-                  <tr key={i}>
-                    <td className="font-medium">{p.proveedor}</td>
-                    <td>{formatMoney(p.total_comprado)}</td>
-                    <td>{formatMoney(p.valor_stock)}</td>
-                    <td>{p.unidades_vendidas}</td>
-                    <td>{formatMoney(p.ingresos)}</td>
-                    <td className={p.utilidad >= 0 ? 'text-emerald-400' : 'text-red-400'}>{formatMoney(p.utilidad)}</td>
-                    <td>{Number(p.margen || 0).toFixed(1)}%</td>
-                    <td>{Number(p.roi || 0).toFixed(1)}%</td>
-                    <td>{p.dias_promedio_venta != null ? `${p.dias_promedio_venta} días` : '—'}</td>
-                    <td><BadgeRec rec={p.recomendacion} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Proveedor</th>
+                      <th>Comprado</th>
+                      <th>Stock $</th>
+                      <th>Vendidos</th>
+                      <th>Ingresos</th>
+                      <th>Utilidad</th>
+                      <th>Margen</th>
+                      <th>ROI</th>
+                      <th>Días a vender</th>
+                      <th>Decisión</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {provPager.pageItems.map((p, i) => (
+                      <tr key={i}>
+                        <td className="font-medium">{p.proveedor}</td>
+                        <td>{formatMoney(p.total_comprado)}</td>
+                        <td>{formatMoney(p.valor_stock)}</td>
+                        <td>{p.unidades_vendidas}</td>
+                        <td>{formatMoney(p.ingresos)}</td>
+                        <td className={p.utilidad >= 0 ? 'text-emerald-400' : 'text-red-400'}>{formatMoney(p.utilidad)}</td>
+                        <td>{Number(p.margen || 0).toFixed(1)}%</td>
+                        <td>{Number(p.roi || 0).toFixed(1)}%</td>
+                        <td>{p.dias_promedio_venta != null ? `${p.dias_promedio_venta} días` : '—'}</td>
+                        <td><BadgeRec rec={p.recomendacion} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Pagination {...provPager} />
+            </>
           )}
         </Section>
       )}

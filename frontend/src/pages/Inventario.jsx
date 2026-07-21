@@ -4,6 +4,8 @@ import { CATEGORIAS, ESTADOS_INVENTARIO, TIPOS_ITEM, labelOf, badgeClass } from 
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import Badge from '../components/Badge';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 const emptyForm = {
   nombre: '',
@@ -158,6 +160,7 @@ export default function Inventario() {
   };
 
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+  const pager = usePagination(items, 10);
 
   return (
     <div>
@@ -167,21 +170,22 @@ export default function Inventario() {
         action={<button className="btn-primary" onClick={openNew}>+ Agregar item</button>}
       />
 
-      <div className="flex gap-3 mb-4 flex-wrap">
+      <div className="filters-bar">
         <input
-          className="max-w-xs"
+          className="w-full"
           placeholder="Buscar por nombre, código o serie..."
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
-        <select className="max-w-[180px]" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
+        <select className="w-full sm:max-w-[200px]" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
           <option value="">Todos los estados</option>
           {ESTADOS_INVENTARIO.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
         </select>
       </div>
 
-      <div className="card overflow-x-auto">
-        <table>
+      <div className="card">
+        <div className="table-wrap">
+          <table>
           <thead>
             <tr>
               <th>Código</th>
@@ -197,7 +201,7 @@ export default function Inventario() {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {pager.pageItems.map((item) => (
               <tr key={item.id}>
                 <td className="font-mono text-xs">{item.codigo_interno}</td>
                 <td>{item.nombre}</td>
@@ -226,14 +230,16 @@ export default function Inventario() {
               <tr><td colSpan={10} className="text-center text-gray-400 py-8">Inventario vacío</td></tr>
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
+        <Pagination {...pager} />
       </div>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editId ? 'Editar item' : 'Agregar al inventario'} wide>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-red-600 text-sm">{error}</p>}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="form-grid">
+            <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Nombre</label>
               <input value={form.nombre} onChange={set('nombre')} required />
             </div>
@@ -291,12 +297,12 @@ export default function Inventario() {
               <label className="block text-xs font-medium text-gray-600 mb-1">Fecha ingreso</label>
               <input type="date" value={form.fecha_ingreso} onChange={set('fecha_ingreso')} required />
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Notas</label>
               <input value={form.notas} onChange={set('notas')} />
             </div>
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
             <button type="submit" className="btn-primary">{editId ? 'Guardar cambios' : 'Guardar'}</button>
           </div>
@@ -317,7 +323,7 @@ export default function Inventario() {
           </p>
         </div>
 
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
           <button
             type="button"
             className={modoAbrir === 'lote' ? 'btn-primary text-sm' : 'btn-secondary text-sm'}
@@ -335,8 +341,8 @@ export default function Inventario() {
         </div>
 
         {modoAbrir === 'lote' ? (
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="col-span-2">
+          <div className="form-grid mb-4">
+            <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Nombre del auto</label>
               <input
                 value={loteNombre}
@@ -362,7 +368,7 @@ export default function Inventario() {
           <>
             <p className="text-sm text-gray-500 mb-3">Nombres distintos de cada auto:</p>
             {autosAbrir.map((auto, i) => (
-              <div key={i} className="flex gap-2 mb-2">
+              <div key={i} className="flex flex-col sm:flex-row gap-2 mb-2">
                 <input
                   placeholder={`Auto ${i + 1} - nombre`}
                   value={auto.nombre}
@@ -385,7 +391,7 @@ export default function Inventario() {
             ))}
             <button
               type="button"
-              className="btn-secondary text-sm mb-4"
+              className="btn-secondary text-sm mb-4 w-full sm:w-auto"
               onClick={() => setAutosAbrir([...autosAbrir, { nombre: '' }])}
             >
               + Agregar auto
@@ -393,7 +399,7 @@ export default function Inventario() {
           </>
         )}
 
-        <div className="flex justify-end gap-2">
+        <div className="form-actions">
           <button className="btn-secondary" onClick={() => setCajaModal(null)}>Cancelar</button>
           <button className="btn-primary" onClick={handleAbrirCaja}>Abrir esta caja</button>
         </div>

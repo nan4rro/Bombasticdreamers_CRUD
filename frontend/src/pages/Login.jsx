@@ -31,7 +31,7 @@ export default function Login() {
       <div className="absolute inset-0 pointer-events-none" style={{
         backgroundImage: 'radial-gradient(circle at 70% 20%, rgba(255,204,0,0.15), transparent 45%), radial-gradient(circle at 20% 80%, rgba(255,204,0,0.08), transparent 40%)',
       }} />
-      <form onSubmit={handleSubmit} className="relative bg-[#161616] border border-[#2a2a2a] rounded-2xl shadow-2xl w-full max-w-sm p-8 space-y-5">
+      <form onSubmit={handleSubmit} className="relative bg-[#161616] border border-[#2a2a2a] rounded-2xl shadow-2xl w-full max-w-sm p-5 sm:p-8 space-y-5">
         <div className="text-center space-y-3">
           <img src="/logo.png" alt="Bombastic Dreamers" className="w-20 h-20 mx-auto object-contain" />
           <div>

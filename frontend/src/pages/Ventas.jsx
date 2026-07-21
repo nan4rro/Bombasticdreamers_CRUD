@@ -4,6 +4,8 @@ import { METODOS_PAGO, CANALES, ESTADOS_VENTA, labelOf, badgeClass } from '../ut
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import Badge from '../components/Badge';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 const emptyItem = { inventario_id: '', producto_nombre: '', cantidad: 1, precio_venta: '', costo_unitario: '' };
 
@@ -157,23 +159,26 @@ export default function Ventas() {
     }
   };
 
+  const pager = usePagination(ventas, 10);
+
   return (
     <div>
       <PageHeader
         title="Ventas"
         subtitle="Registra ventas y descuenta inventario automáticamente"
         action={
-          <div className="flex gap-2">
+          <>
             <button className="btn-secondary" onClick={handleRecalcular} disabled={recalcLoading}>
               {recalcLoading ? 'Recalculando...' : 'Recalcular utilidades'}
             </button>
             <button className="btn-primary" onClick={openNew}>+ Nueva venta</button>
-          </div>
+          </>
         }
       />
 
-      <div className="card overflow-x-auto">
-        <table>
+      <div className="card">
+        <div className="table-wrap">
+          <table>
           <thead>
             <tr>
               <th>Fecha</th>
@@ -189,7 +194,7 @@ export default function Ventas() {
             </tr>
           </thead>
           <tbody>
-            {ventas.map((v) => (
+            {pager.pageItems.map((v) => (
               <tr key={v.id}>
                 <td>{formatDate(v.fecha)}</td>
                 <td>{v.cliente_nombre || '-'}</td>
@@ -209,20 +214,22 @@ export default function Ventas() {
               <tr><td colSpan={10} className="text-center text-gray-400 py-8">No hay ventas registradas</td></tr>
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
+        <Pagination {...pager} />
       </div>
 
       <Modal open={modal} onClose={() => setModal(false)} title="Nueva venta" wide>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-red-600 text-sm">{error}</p>}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="form-grid">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
               <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Cliente *</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <select
                   value={form.cliente_id}
                   onChange={(e) => {
@@ -276,11 +283,11 @@ export default function Ventas() {
             </div>
           </div>
 
-          <div className="border rounded-lg p-4 space-y-3">
+          <div className="border rounded-lg p-3 sm:p-4 space-y-3">
             <h4 className="font-medium text-sm">Productos</h4>
             {form.items.map((item, idx) => (
-              <div key={idx} className="grid grid-cols-5 gap-2 items-end">
-                <div className="col-span-2">
+              <div key={idx} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 items-end border-b pb-3 last:border-0">
+                <div className="md:col-span-2">
                   <label className="block text-xs text-gray-500 mb-1">Del inventario</label>
                   <select value={item.inventario_id} onChange={(e) => selectProducto(idx, e.target.value)}>
                     <option value="">Manual...</option>
@@ -317,7 +324,7 @@ export default function Ventas() {
             ))}
             <button
               type="button"
-              className="btn-secondary text-sm"
+              className="btn-secondary text-sm w-full sm:w-auto"
               onClick={() => setForm({ ...form, items: [...form.items, { ...emptyItem }] })}
             >
               + Agregar producto
@@ -329,7 +336,7 @@ export default function Ventas() {
             <p><strong>Utilidad bruta:</strong> {formatMoney(totalUtilidad)}</p>
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
             <button type="submit" className="btn-primary">Registrar venta</button>
           </div>
@@ -361,7 +368,7 @@ export default function Ventas() {
               onChange={(e) => setNuevoCliente({ ...nuevoCliente, ciudad: e.target.value })}
             />
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={() => setNuevoClienteModal(false)}>Cancelar</button>
             <button type="submit" className="btn-primary">Agregar</button>
           </div>
@@ -371,13 +378,14 @@ export default function Ventas() {
       <Modal open={!!detalle} onClose={() => setDetalle(null)} title={`Venta #${detalle?.id || ''}`} wide>
         {detalle && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="form-grid text-sm">
               <p><strong>Fecha:</strong> {formatDate(detalle.fecha)}</p>
               <p><strong>Cliente:</strong> {detalle.cliente_nombre || '-'}</p>
               <p><strong>Total:</strong> {formatMoney(detalle.total_venta)}</p>
               <p><strong>Utilidad:</strong> <span className="text-green-600">{formatMoney(detalle.utilidad_bruta)}</span></p>
             </div>
-            <table>
+            <div className="table-wrap">
+              <table>
               <thead>
                 <tr>
                   <th>Producto</th>
@@ -396,7 +404,7 @@ export default function Ventas() {
                       <input
                         type="number"
                         step="0.01"
-                        className="w-24"
+                        className="w-full max-w-24"
                         defaultValue={item.precio_venta}
                         onBlur={(e) => {
                           if (Number(e.target.value) !== Number(item.precio_venta)) {
@@ -409,7 +417,7 @@ export default function Ventas() {
                       <input
                         type="number"
                         step="0.01"
-                        className="w-24"
+                        className="w-full max-w-24"
                         defaultValue={item.costo_unitario}
                         onBlur={(e) => {
                           if (Number(e.target.value) !== Number(item.costo_unitario)) {
@@ -422,8 +430,9 @@ export default function Ventas() {
                   </tr>
                 ))}
               </tbody>
-            </table>
-            <div className="flex justify-end">
+              </table>
+            </div>
+            <div className="form-actions">
               <button className="btn-secondary" onClick={() => setDetalle(null)}>Cerrar</button>
             </div>
           </div>

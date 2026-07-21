@@ -4,6 +4,8 @@ import { TIPOS_COMPRA, ESTADOS_COMPRA, labelOf, badgeClass } from '../utils/cons
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
 import Badge from '../components/Badge';
+import Pagination from '../components/Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 const emptyForm = {
   fecha: hoy(),
@@ -106,6 +108,7 @@ export default function Compras() {
   };
 
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
+  const pager = usePagination(compras, 10);
 
   return (
     <div>
@@ -115,8 +118,9 @@ export default function Compras() {
         action={<button className="btn-primary" onClick={openNew}>+ Nueva compra</button>}
       />
 
-      <div className="card overflow-x-auto">
-        <table>
+      <div className="card">
+        <div className="table-wrap">
+          <table>
           <thead>
             <tr>
               <th>Fecha</th>
@@ -131,7 +135,7 @@ export default function Compras() {
             </tr>
           </thead>
           <tbody>
-            {compras.map((c) => (
+            {pager.pageItems.map((c) => (
               <tr key={c.id}>
                 <td>{formatDate(c.fecha)}</td>
                 <td>{c.proveedor_nombre || '-'}</td>
@@ -153,20 +157,22 @@ export default function Compras() {
               <tr><td colSpan={9} className="text-center text-gray-400 py-8">No hay compras registradas</td></tr>
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
+        <Pagination {...pager} />
       </div>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editId ? 'Editar compra' : 'Nueva compra'} wide>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-red-600 text-sm">{error}</p>}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="form-grid">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
               <input type="date" value={form.fecha} onChange={set('fecha')} required />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Proveedor</label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <select
                   value={form.proveedor_id}
                   onChange={(e) => {
@@ -213,7 +219,7 @@ export default function Compras() {
               Es caja cerrada (case)
             </label>
           )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="form-grid">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Cantidad</label>
               <input type="number" min="1" step="1" value={form.cantidad} onChange={set('cantidad')} required />
@@ -239,7 +245,7 @@ export default function Compras() {
             <p><strong>Costo total:</strong> {formatMoney(costoTotal)}</p>
             <p><strong>Costo unitario:</strong> {formatMoney(costoUnitario)}</p>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
             <button type="submit" className="btn-primary">Guardar</button>
           </div>
@@ -252,7 +258,7 @@ export default function Compras() {
             <label className="block text-xs font-medium text-gray-600 mb-1">Nombre</label>
             <input value={nuevoProvNombre} onChange={(e) => setNuevoProvNombre(e.target.value)} required autoFocus />
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="form-actions">
             <button type="button" className="btn-secondary" onClick={() => setNuevoProvModal(false)}>Cancelar</button>
             <button type="submit" className="btn-primary">Agregar</button>
           </div>
