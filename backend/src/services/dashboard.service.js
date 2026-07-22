@@ -3,7 +3,7 @@ import * as ventasService from './ventas.service.js';
 import * as gastosService from './gastos.service.js';
 import * as inventarioService from './inventario.service.js';
 import * as cajaService from './caja.service.js';
-import { hoy, inicioMes, finMes, calcularMargen } from '../utils/calculos.js';
+import { hoy, inicioMes, finMes, calcularMargen, haceDias } from '../utils/calculos.js';
 
 function n(v) {
   return Number(v || 0);
@@ -363,6 +363,8 @@ export async function obtenerDashboardDecisiones() {
     velocidad,
     rentables,
     stockCriticoRows,
+    ventasPorDia,
+    gastosPorCat,
   ] = await Promise.all([
     ventasService.ventasDelPeriodo(fechaHoy, fechaHoy),
     ventasService.ventasDelPeriodo(desdeMes, hastaMes),
@@ -377,6 +379,8 @@ export async function obtenerDashboardDecisiones() {
     velocidadVentas(),
     productosRentables(),
     stockCritico(),
+    ventasService.ventasPorDia(haceDias(29), fechaHoy),
+    gastosService.gastosPorCategoria(desdeMes, hastaMes),
   ]);
 
   const utilidadNetaMes = n(ventasMes?.utilidad_bruta) - n(gastosMes?.total);
@@ -418,6 +422,42 @@ export async function obtenerDashboardDecisiones() {
     productos_peores: rentables.peores,
     stock_critico: stockCriticoRows,
     lives_rentables: [],
+    graficos: {
+      ventas_por_dia: ventasPorDia.map((r) => ({
+        fecha: r.fecha,
+        ventas: n(r.ventas),
+        utilidad: n(r.utilidad),
+        cantidad: n(r.cantidad),
+      })),
+      gastos_por_categoria: gastosPorCat.map((r) => ({
+        categoria: r.categoria,
+        total: n(r.total),
+      })),
+      top_productos: topProductos.map((r) => ({
+        nombre: r.producto_nombre,
+        vendidos: n(r.total_vendido),
+        ingresos: n(r.ingresos),
+        utilidad: n(r.utilidad),
+      })),
+      por_canal: (velocidad.por_canal || []).map((r) => ({
+        canal: r.canal || 'Sin canal',
+        total: n(r.total),
+        utilidad: n(r.utilidad),
+        ventas: n(r.ventas),
+      })),
+      por_pago: (velocidad.por_pago || []).map((r) => ({
+        metodo: r.metodo_pago || 'Sin método',
+        total: n(r.total),
+        utilidad: n(r.utilidad),
+        ventas: n(r.ventas),
+      })),
+      proveedores: proveedores.slice(0, 8).map((p) => ({
+        proveedor: p.proveedor,
+        utilidad: n(p.utilidad),
+        ingresos: n(p.ingresos),
+        comprado: n(p.total_comprado),
+      })),
+    },
 
     resumen_decisiones: {
       proveedores_seguir: proveedores.filter((p) => p.recomendacion?.nivel === 'excelente' || p.recomendacion?.nivel === 'bueno').length,

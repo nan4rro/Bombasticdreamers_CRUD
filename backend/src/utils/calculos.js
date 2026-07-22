@@ -31,6 +31,12 @@ export function finMes(fecha = new Date()) {
   return `${y}-${String(m).padStart(2, '0')}-${String(last).padStart(2, '0')}`;
 }
 
+export function haceDias(dias) {
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  return d.toISOString().split('T')[0];
+}
+
 export function generarCodigoInterno(prefix = 'BD') {
   const ts = Date.now().toString(36).toUpperCase();
   const rand = Math.random().toString(36).substring(2, 5).toUpperCase();

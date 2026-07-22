@@ -295,3 +295,16 @@ export async function autosVendidos(desde, hasta) {
   `, [desde, hasta]);
   return Number(row?.total || 0);
 }
+
+export async function ventasPorDia(desde, hasta) {
+  return getAll(`
+    SELECT fecha,
+           COALESCE(SUM(total_venta), 0) AS ventas,
+           COALESCE(SUM(utilidad_bruta), 0) AS utilidad,
+           COUNT(*) AS cantidad
+    FROM ventas
+    WHERE estado != 'cancelado' AND fecha >= $1 AND fecha <= $2
+    GROUP BY fecha
+    ORDER BY fecha ASC
+  `, [desde, hasta]);
+}
